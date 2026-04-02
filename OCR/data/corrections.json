@@ -1,0 +1,34 @@
+[
+  {
+    "input": "soqp",
+    "output": "soap"
+  },
+  {
+    "input": "aice",
+    "output": "rice"
+  },
+  {
+    "input": "potab",
+    "output": "potato"
+  },
+  {
+    "input": "m1lk",
+    "output": "milk"
+  },
+  {
+    "input": "3?",
+    "output": "37"
+  },
+  {
+    "input": ")'",
+    "output": "Oil"
+  },
+  {
+    "input": "3 / |",
+    "output": "311"
+  },
+  {
+    "input": "po rats",
+    "output": "potato"
+  }
+]

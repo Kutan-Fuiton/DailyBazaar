@@ -1,0 +1,45 @@
+{
+  "items": [
+    {
+      "id": "item_001",
+      "name": "potato",
+      "aliases": [
+        "po rats",
+        "pota to",
+        "patato"
+      ],
+      "category": "vegetable",
+      "unit": "kg"
+    },
+    {
+      "id": "item_002",
+      "name": "milk",
+      "aliases": [
+        "mlik",
+        "milc"
+      ],
+      "category": "dairy",
+      "unit": "litre"
+    },
+    {
+      "id": "item_003",
+      "name": "oil",
+      "aliases": [
+        "0il",
+        "oi1"
+      ],
+      "category": "grocery",
+      "unit": "litre"
+    },
+    {
+      "id": "item_004",
+      "name": "soap",
+      "aliases": [
+        "soqp",
+        "s0ap"
+      ],
+      "category": "household",
+      "unit": "piece"
+    }
+  ]
+}
