@@ -5,160 +5,142 @@
       "name": "potato",
       "aliases": ["po rats", "pota to", "patato", "ptto"],
       "category": "vegetable",
-      "unit": "kg",
-      "tags": ["root vegetable", "starchy", "sabzi", "aloo", "cooking essential"]
+      "unit": "kg"
     },
     {
       "id": "item_002",
       "name": "milk",
       "aliases": ["mlik", "milc", "mi1k"],
       "category": "dairy",
-      "unit": "litre",
-      "tags": ["white", "protein", "calcium", "doodh", "breakfast"]
+      "unit": "litre"
     },
     {
       "id": "item_003",
       "name": "oil",
       "aliases": ["0il", "oi1", "refine oil", "refined oil"],
       "category": "grocery",
-      "unit": "litre",
-      "tags": ["cooking oil", "vegetable oil", "fat", "tel", "frying"]
+      "unit": "litre"
     },
     {
       "id": "item_004",
       "name": "soap",
       "aliases": ["soqp", "s0ap"],
       "category": "household",
-      "unit": "piece",
-      "tags": ["bath", "cleaning", "hygiene", "sabun", "washing"]
+      "unit": "piece"
     },
+
     {
       "id": "item_005",
       "name": "maggie",
       "aliases": ["maggi", "magi", "laggie", "lagg ie", "magie"],
       "category": "instant food",
-      "unit": "packet",
-      "tags": ["noodles", "instant noodles", "2 minute noodles", "snack", "quick meal"]
+      "unit": "packet"
     },
     {
       "id": "item_006",
       "name": "posto",
       "aliases": ["jk posto", "posto dana", "p0sto", "poshto"],
       "category": "spice",
-      "unit": "gram",
-      "tags": ["poppy seeds", "khus khus", "bengali cuisine", "spice", "thickening agent"]
+      "unit": "gram"
     },
     {
       "id": "item_007",
       "name": "marie biscuit",
       "aliases": ["marrie biscuit", "marie biskut", "maurie biscuit", "mari biscuit"],
       "category": "snack",
-      "unit": "packet",
-      "tags": ["tea biscuit", "sweet biscuit", "cookie", "bakery", "evening snack"]
+      "unit": "packet"
     },
+
     {
       "id": "item_008",
       "name": "onion",
       "aliases": ["onoin", "onon", "pyaj", "piyaj"],
       "category": "vegetable",
-      "unit": "kg",
-      "tags": ["bulb vegetable", "pungent", "sabzi", "cooking base", "pyaz"]
+      "unit": "kg"
     },
     {
       "id": "item_009",
       "name": "rice",
       "aliases": ["ricee", "raice", "chawal"],
       "category": "grain",
-      "unit": "kg",
-      "tags": ["staple food", "cereal", "grain", "chawal", "basmati", "boiled rice"]
+      "unit": "kg"
     },
     {
       "id": "item_010",
       "name": "atta",
       "aliases": ["ata", "aata", "atta flour"],
       "category": "grain",
-      "unit": "kg",
-      "tags": ["wheat flour", "chapati flour", "whole wheat", "roti", "baking"]
+      "unit": "kg"
     },
     {
       "id": "item_011",
       "name": "sugar",
       "aliases": ["suger", "shugar", "chini"],
       "category": "grocery",
-      "unit": "kg",
-      "tags": ["sweetener", "white sugar", "chini", "baking", "dessert"]
+      "unit": "kg"
     },
     {
       "id": "item_012",
       "name": "salt",
       "aliases": ["sa1t", "saltt", "nun"],
       "category": "grocery",
-      "unit": "kg",
-      "tags": ["sodium", "table salt", "namak", "seasoning", "preservative"]
+      "unit": "kg"
     },
     {
       "id": "item_013",
       "name": "turmeric powder",
       "aliases": ["haldi", "tumeric", "turmaric"],
       "category": "spice",
-      "unit": "gram",
-      "tags": ["yellow spice", "haldi", "anti-inflammatory", "curry spice", "coloring agent"]
+      "unit": "gram"
     },
     {
       "id": "item_014",
       "name": "chana",
       "aliases": ["chola", "kachachola", "channa"],
       "category": "pulse",
-      "unit": "kg",
-      "tags": ["chickpeas", "bengal gram", "legume", "protein", "chole", "dal"]
+      "unit": "kg"
     },
     {
       "id": "item_015",
       "name": "bread",
       "aliases": ["bred", "brad"],
       "category": "bakery",
-      "unit": "packet",
-      "tags": ["bakery item", "sandwich bread", "toast", "breakfast", "pav"]
+      "unit": "packet"
     },
     {
       "id": "item_016",
       "name": "egg",
       "aliases": ["eg", "eggs", "anda"],
       "category": "dairy",
-      "unit": "piece",
-      "tags": ["protein", "anda", "breakfast", "omelette", "boiled egg"]
+      "unit": "piece"
     },
     {
       "id": "item_017",
       "name": "tea",
       "aliases": ["tee", "chai", "t"],
       "category": "beverage",
-      "unit": "gram",
-      "tags": ["chai", "black tea", "caffeine", "hot beverage", "breakfast drink"]
+      "unit": "gram"
     },
     {
       "id": "item_018",
       "name": "coffee",
       "aliases": ["cofee", "kofi"],
       "category": "beverage",
-      "unit": "gram",
-      "tags": ["caffeine", "hot drink", "morning beverage", "espresso", "filter coffee"]
+      "unit": "gram"
     },
     {
       "id": "item_019",
       "name": "detergent",
       "aliases": ["deterjent", "surf", "detergnt"],
       "category": "household",
-      "unit": "packet",
-      "tags": ["laundry", "washing powder", "cleaning", "soap powder", "surf excel"]
+      "unit": "packet"
     },
     {
       "id": "item_020",
       "name": "shampoo",
       "aliases": ["shampu", "shampo", "sampoo"],
       "category": "household",
-      "unit": "bottle",
-      "tags": ["hair care", "hair wash", "bath product", "hygiene", "conditioner"]
+      "unit": "bottle"
     }
   ]
 }

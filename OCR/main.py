@@ -1,70 +1,24 @@
-from trocr import extract_text
-from grouping import build_structure, group_lines
-from cleaned import parse_lines
-from normalise import map_to_item
-import json
+from fastapi import FastAPI, UploadFile, File
+from PIL import Image
+import io
+import time
 
-with open("data/items.json") as f:
-    items_data = json.load(f)
-    
+from glm_ocr import run_glm_ocr
 
-image_path = "data/Preprocessed_Image/data2_preprocessed.jpg"
+app = FastAPI()
 
-results = extract_text(image_path)
+@app.post("/scan")
+async def scan(file: UploadFile = File(...)):
+    start = time.time()
 
-columns, col_types, rows = build_structure(results)
+    image_bytes = await file.read()
+    image = Image.open(io.BytesIO(image_bytes))
 
-# Convert rows → text lines
-lines = []
-for row in rows:
-    text_line = " ".join([w[1] for w in row['words']])
-    lines.append(text_line)
+    prompt = "Extract the items, quantities, and prices from this receipt:"
 
+    # 👉 call your GLM-OCR function here
+    result = run_glm_ocr(image, prompt)
 
-
-print("\nColumn Types Detected:")
-for i, t in enumerate(col_types):
-    print(f"Column {i}: {t}")
-
-print("\nRaw Lines:\n")
-for line in lines:
-    print(line)
-
-# Parsing the lines to extract items & prices
-
-final_data = []
-total = None
-
-for row in rows:
-    item = ""
-    price = None
-
-    for bbox, text, conf in row['words']:
-        x_center = (bbox[0][0] + bbox[2][0]) / 2
-
-        distances = [abs(x_center - col['x']) for col in columns]
-        col_idx = distances.index(min(distances))
-
-        col_type = col_types[col_idx]
-        
-        if col_type == "text":
-            item += " " + text
-
-        elif col_type == "number":
-            if text.isdigit():
-                price = int(text)
-
-    item = item.strip().lower().replace(".", "")
-    item = map_to_item(item, items_data["items"])
-
-    if item == "" and price:
-        total = price
-    elif item:
-        final_data.append((item, price))
-
-print("\n🧾 Final Parsed Output:\n")
-
-for item, price in final_data:
-    print(f"{item}: {price}")
-
-print(f"\nTotal: {total}")
+    end = time.time()
+    print(f"Processing time: {end - start:.2f} seconds")
+    return {"result": result}

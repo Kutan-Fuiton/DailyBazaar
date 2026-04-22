@@ -1,6 +1,5 @@
 import cv2
 
-
 def preprocess_data(input_path, output_path):
     # read the image
     img = cv2.imread(input_path)
