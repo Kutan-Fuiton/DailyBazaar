@@ -1,4 +1,6 @@
+# =========================
 # Python
+# =========================
 __pycache__/
 *.pyc
 *.pyo
@@ -10,19 +12,74 @@ env/
 .venv/
 .env
 
-# IDE
+# =========================
+# Node / React / Vite
+# =========================
+node_modules/
+dist/
+build/
+.vite/
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables (frontend)
+.env
+.env.*
+!.env.example
+
+# =========================
+# TypeScript
+# =========================
+*.tsbuildinfo
+
+# =========================
+# Tailwind / PostCSS
+# =========================
+.cache/
+
+# =========================
+# IDE / Editor
+# =========================
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# Files
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Database / Misc
+# =========================
 *.log
 *.db
 *.sqlite3
-.DS_Store
 
-# Distribution
-dist/
-build/
-*.egg-info/
+# =========================
+# Testing
+# =========================
+coverage/
+
+# =========================
+# Optional (if using Docker)
+# =========================
+.dockerignore
+
+# =========================
+# Optional (if deploying)
+# =========================
+.vercel/
+.netlify/
+
+# =========================
+# Misc
+# =========================
+*.lock
