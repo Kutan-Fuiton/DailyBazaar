@@ -1,0 +1,479 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+/* =====================================================
+   SPENDLY — Design System & Theme Variables
+   =====================================================
+   All design tokens are defined as CSS custom properties
+   for easy future modification. Change values here to
+   update the entire app's look and feel.
+   ===================================================== */
+
+/* ── Tailwind v4 theme extension ── */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* =====================================================
+   LIGHT THEME (default)
+   ===================================================== */
+:root {
+  /* ── Brand colors ── */
+  --color-primary:       #0D9488;
+  --color-primary-light:  #14B8A6;
+  --color-primary-dark:   #0F766E;
+  --color-primary-glow:   rgba(13, 148, 136, 0.25);
+
+  --color-accent:         #6366F1;
+  --color-accent-light:   #818CF8;
+  --color-accent-glow:    rgba(99, 102, 241, 0.2);
+
+  --color-secondary:      #8B5CF6;
+  --color-secondary-light: #A78BFA;
+
+  /* ── Semantic colors ── */
+  --color-danger:   #EF4444;
+  --color-warning:  #F59E0B;
+  --color-success:  #10B981;
+
+  /* ── Surfaces ── */
+  --color-bg:             #F1F5F9;
+  --color-bg-subtle:      #E2E8F0;
+  --color-surface:        rgba(255, 255, 255, 0.65);
+  --color-surface-hover:  rgba(255, 255, 255, 0.85);
+  --color-surface-solid:  #FFFFFF;
+
+  /* ── Typography ── */
+  --color-text:           #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted:     #94A3B8;
+
+  /* ── Borders & effects ── */
+  --color-border:       rgba(0, 0, 0, 0.07);
+  --color-border-hover: rgba(13, 148, 136, 0.3);
+  --color-shadow:       rgba(0, 0, 0, 0.06);
+
+  /* ── Layout ── */
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+  --radius-2xl: 24px;
+
+  /* ── Gradient stops (for backgrounds) ── */
+  --gradient-start: #E0F2FE;
+  --gradient-mid:   #F0FDFA;
+  --gradient-end:   #EDE9FE;
+
+  /* ── Decorative orb colors ── */
+  --orb-1: rgba(13, 148, 136, 0.12);
+  --orb-2: rgba(99, 102, 241, 0.10);
+  --orb-3: rgba(139, 92, 246, 0.08);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+/* =====================================================
+   DARK THEME
+   Applied when <html class="dark">
+   ===================================================== */
+html.dark {
+  --color-primary:       #2DD4BF;
+  --color-primary-light:  #5EEAD4;
+  --color-primary-dark:   #14B8A6;
+  --color-primary-glow:   rgba(45, 212, 191, 0.3);
+
+  --color-accent:         #818CF8;
+  --color-accent-light:   #A5B4FC;
+  --color-accent-glow:    rgba(129, 140, 248, 0.25);
+
+  --color-secondary:      #A78BFA;
+  --color-secondary-light: #C4B5FD;
+
+  --color-danger:   #F87171;
+  --color-warning:  #FBBF24;
+  --color-success:  #34D399;
+
+  --color-bg:             #0B1120;
+  --color-bg-subtle:      #111827;
+  --color-surface:        rgba(30, 41, 59, 0.55);
+  --color-surface-hover:  rgba(30, 41, 59, 0.75);
+  --color-surface-solid:  #1E293B;
+
+  --color-text:           #F1F5F9;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted:     #64748B;
+
+  --color-border:       rgba(255, 255, 255, 0.06);
+  --color-border-hover: rgba(45, 212, 191, 0.3);
+  --color-shadow:       rgba(0, 0, 0, 0.3);
+
+  --gradient-start: #0B1120;
+  --gradient-mid:   #0F172A;
+  --gradient-end:   #0B1120;
+
+  --orb-1: rgba(45, 212, 191, 0.08);
+  --orb-2: rgba(129, 140, 248, 0.07);
+  --orb-3: rgba(167, 139, 250, 0.06);
+}
+
+/* =====================================================
+   BASE RESETS
+   ===================================================== */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-mid), var(--gradient-end));
+  background-attachment: fixed;
+  color: var(--color-text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 0.4s ease, color 0.3s ease;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* =====================================================
+   DECORATIVE BACKGROUND ORBS
+   Floating gradient blobs for visual depth.
+   Applied via .bg-orbs container in App.tsx.
+   ===================================================== */
+.bg-orbs {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bg-orbs::before,
+.bg-orbs::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: float 20s ease-in-out infinite;
+}
+
+.bg-orbs::before {
+  width: 500px;
+  height: 500px;
+  background: var(--orb-1);
+  top: -10%;
+  right: -5%;
+  animation-delay: 0s;
+}
+
+.bg-orbs::after {
+  width: 400px;
+  height: 400px;
+  background: var(--orb-2);
+  bottom: 10%;
+  left: -8%;
+  animation-delay: -10s;
+}
+
+/* Third orb via a child element */
+.bg-orb-3 {
+  position: absolute;
+  width: 350px;
+  height: 350px;
+  background: var(--orb-3);
+  border-radius: 50%;
+  filter: blur(80px);
+  top: 40%;
+  right: 20%;
+  animation: float 25s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%      { transform: translate(30px, -40px) scale(1.05); }
+  50%      { transform: translate(-20px, 20px) scale(0.95); }
+  75%      { transform: translate(10px, 30px) scale(1.02); }
+}
+
+/* =====================================================
+   GLASS CARD
+   Reusable utility for glassmorphism cards.
+   Usage: className="glass-card"
+   ===================================================== */
+.glass-card {
+  background: var(--color-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 4px 24px var(--color-shadow);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.glass-card:hover {
+  border-color: var(--color-border-hover);
+  box-shadow: 0 8px 32px var(--color-shadow), 0 0 0 1px var(--color-border-hover);
+}
+
+/* ── Glass nav variant ── */
+.glass-nav {
+  background: var(--color-surface);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 1px 12px var(--color-shadow);
+  transition: all 0.3s ease;
+}
+
+/* =====================================================
+   SCROLLBAR
+   ===================================================== */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-muted);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* =====================================================
+   UTILITY ANIMATIONS
+   ===================================================== */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 16px var(--color-primary-glow), 0 4px 24px var(--color-shadow); }
+  50%      { box-shadow: 0 0 32px var(--color-primary-glow), 0 4px 24px var(--color-shadow); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+.animate-spin {
+  animation: spin 0.8s linear infinite;
+}
+
+/* =====================================================
+   PAGE CONTAINER
+   Centered content wrapper used on all pages.
+   ===================================================== */
+.page-container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .page-container {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .page-container {
+    padding-left: 4rem;
+    padding-right: 4rem;
+  }
+}
+
+/* =====================================================
+   SHADCN THEME — Spendly branded colors
+   These map shadcn's CSS variables to our Spendly palette.
+   Shadcn components will automatically pick up these colors.
+   ===================================================== */
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: 'Inter', 'Geist Variable', sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ── Shadcn Light Theme — Spendly teal/indigo palette ── */
+:root {
+  --background: oklch(0.97 0.005 250);
+  --foreground: oklch(0.15 0.02 260);
+  --card: oklch(0.99 0 0 / 70%);
+  --card-foreground: oklch(0.15 0.02 260);
+  --popover: oklch(0.99 0 0);
+  --popover-foreground: oklch(0.15 0.02 260);
+  --primary: oklch(0.55 0.15 175);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.55 0.2 285);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.93 0.005 250);
+  --muted-foreground: oklch(0.55 0.01 250);
+  --accent: oklch(0.55 0.18 270);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.65 0.2 25);
+  --border: oklch(0.88 0.005 250);
+  --input: oklch(0.88 0.005 250);
+  --ring: oklch(0.55 0.15 175);
+  --radius: 0.75rem;
+  --chart-1: oklch(0.55 0.15 175);
+  --chart-2: oklch(0.55 0.18 270);
+  --chart-3: oklch(0.55 0.2 285);
+  --chart-4: oklch(0.7 0.15 80);
+  --chart-5: oklch(0.65 0.2 25);
+  --sidebar: oklch(0.95 0.005 250);
+  --sidebar-foreground: oklch(0.15 0.02 260);
+  --sidebar-primary: oklch(0.55 0.15 175);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.93 0.005 250);
+  --sidebar-accent-foreground: oklch(0.15 0.02 260);
+  --sidebar-border: oklch(0.88 0.005 250);
+  --sidebar-ring: oklch(0.55 0.15 175);
+}
+
+/* ── Shadcn Dark Theme — Spendly neon teal/cyan palette ── */
+.dark {
+  --background: oklch(0.12 0.02 260);
+  --foreground: oklch(0.95 0.005 250);
+  --card: oklch(0.18 0.015 260 / 60%);
+  --card-foreground: oklch(0.95 0.005 250);
+  --popover: oklch(0.18 0.015 260);
+  --popover-foreground: oklch(0.95 0.005 250);
+  --primary: oklch(0.75 0.15 175);
+  --primary-foreground: oklch(0.12 0.02 260);
+  --secondary: oklch(0.65 0.18 285);
+  --secondary-foreground: oklch(0.95 0.005 250);
+  --muted: oklch(0.22 0.015 260);
+  --muted-foreground: oklch(0.6 0.01 250);
+  --accent: oklch(0.65 0.15 270);
+  --accent-foreground: oklch(0.95 0.005 250);
+  --destructive: oklch(0.7 0.19 25);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.75 0.15 175);
+  --chart-1: oklch(0.75 0.15 175);
+  --chart-2: oklch(0.65 0.15 270);
+  --chart-3: oklch(0.65 0.18 285);
+  --chart-4: oklch(0.75 0.12 80);
+  --chart-5: oklch(0.7 0.19 25);
+  --sidebar: oklch(0.18 0.015 260);
+  --sidebar-foreground: oklch(0.95 0.005 250);
+  --sidebar-primary: oklch(0.75 0.15 175);
+  --sidebar-primary-foreground: oklch(0.95 0.005 250);
+  --sidebar-accent: oklch(0.22 0.015 260);
+  --sidebar-accent-foreground: oklch(0.95 0.005 250);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.75 0.15 175);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply text-foreground;
+    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-mid), var(--gradient-end));
+    background-attachment: fixed;
+  }
+  html {
+    @apply font-sans;
+  }
+}
