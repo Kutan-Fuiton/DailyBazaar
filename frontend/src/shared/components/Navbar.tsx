@@ -1,253 +1,389 @@
 /**
- * Navbar — Responsive navigation with auth buttons.
+ * Navbar — Vaniq branded navigation.
  *
- * Desktop (≥768px):
- *   - Sticky top glassmorphism bar
- *   - Left: Brand logo
- *   - Center: Nav links (Home, Items, Scan, History, Profile)
- *   - Right: Sign In + Register buttons, theme toggle
+ * Desktop: Fixed top header — glass blur, VANIQ wordmark,
+ *          3 nav links (Home, History, Items) + profile avatar.
  *
- * Mobile (<768px):
- *   - Fixed bottom floating dock
- *   - Elevated center "Scan" FAB with pulse glow
- *
- * The auth buttons are placeholders — wire them to your
- * auth provider (e.g. /login, /register routes) when ready.
+ * Mobile: Same fixed top header (compact) + bottom tab bar with
+ *         4 tabs: Home | Shop | [+] | History  — plus profile avatar.
+ *         The centre [+] opens an action sheet (Log / Scan / List).
  */
 
-import { useState, useEffect } from "react";
-import { NavLink, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
-import { useTheme } from "./ThemeProvider";
-import GradientText from "./GradientText";
-import { Button } from "@/components/ui/button";
+import { useState, useRef, useEffect } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { motion, AnimatePresence } from "framer-motion";
 
-/* ── Navigation items ── */
-const navItems = [
-  { to: "/", label: "Home", icon: HomeIcon },
-  { to: "/items", label: "Items", icon: ItemsIcon },
-  { to: "/scan", label: "Scan", icon: ScanIcon },
-  { to: "/transactions", label: "History", icon: HistoryIcon },
-  { to: "/profile", label: "Profile", icon: ProfileIcon },
-] as const;
+/* ── Primary tabs ── */
+const MOBILE_TABS = [
+  { path: "/home",         label: "Home",    icon: "home" },
+  { path: "/shop",         label: "Shop",    icon: "shopping_cart" },
+  { path: "/history",      label: "History", icon: "receipt_long" },
+  { path: "/profile",      label: "Profile", icon: "person" },
+];
+
+/* ── Desktop nav links ── */
+const DESKTOP_NAV = [
+  { path: "/home",    label: "Home" },
+  { path: "/stats",   label: "Stats" },
+  { path: "/history", label: "History" },
+  { path: "/items",   label: "Items" },
+];
+
+/* ── Action sheet options ── */
+const ACTIONS = [
+  { icon: "photo_camera",  label: "Scan Bill",       path: "/scan", color: "#00dce5" },
+  { icon: "analytics",     label: "Stats & Trends",   path: "/stats", color: "#c3f400" },
+  { icon: "checklist",     label: "Shopping List",   path: "/shop", color: "#ffb86f" },
+];
 
 export default function Navbar() {
-  const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
   const location = useLocation();
-  const [scrolled, setScrolled] = useState(false);
+  const navigate = useNavigate();
+  const [actionOpen, setActionOpen] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
 
-  /* Track scroll to intensify glass blur */
+  const isActive = (path: string) => location.pathname === path;
+
+  /* Close sheet when clicking outside */
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    if (!actionOpen) return;
+    function handler(e: MouseEvent) {
+      if (sheetRef.current && !sheetRef.current.contains(e.target as Node)) {
+        setActionOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [actionOpen]);
+
+  /* Close on route change */
+  useEffect(() => { setActionOpen(false); }, [location.pathname]);
 
   return (
     <>
-      {/* ───── DESKTOP NAV (top bar) ───── */}
-      <nav
-        className={`hidden md:block sticky top-0 z-50 glass-nav transition-all duration-300 ${
-          scrolled ? "shadow-lg" : ""
-        }`}
-        style={{
-          backdropFilter: scrolled ? "blur(32px)" : "blur(24px)",
-          WebkitBackdropFilter: scrolled ? "blur(32px)" : "blur(24px)",
-        }}
-      >
-        <div className="mx-auto flex items-center justify-between px-6 py-3">
-          {/* ── Left: Brand ── */}
-          <NavLink to="/" className="text-2xl font-extrabold tracking-tight shrink-0">
-            <GradientText>Spendly</GradientText>
+      {/* ── Top header ── */}
+      <header className="fixed top-0 w-full z-50 glass-nav">
+        <div className="h-14 max-w-[1200px] mx-auto px-5 flex items-center justify-between gap-4">
+
+          {/* Logo */}
+          <NavLink to="/home" className="flex items-center gap-2 flex-shrink-0">
+            <span style={{
+              fontFamily: "'Syne', sans-serif",
+              fontSize: "20px",
+              fontWeight: 800,
+              letterSpacing: "-0.02em",
+              color: "#c3f400",
+              lineHeight: 1,
+            }}>
+              VANIQ
+            </span>
           </NavLink>
 
-          {/* ── Center: Nav links ── */}
-          <ul className="flex items-center gap-0.5">
-            {navItems.map(({ to, label, icon: Icon }) => {
-              const isScan = to === "/scan";
-              const isActive = location.pathname === to;
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-5 flex-1 justify-center" aria-label="Main navigation">
+            {DESKTOP_NAV.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: "13px",
+                  fontWeight: isActive(item.path) ? 600 : 400,
+                  letterSpacing: "0.01em",
+                  color: isActive(item.path) ? "#c3f400" : "#8e9379",
+                  transition: "color 0.2s ease",
+                  textDecoration: "none",
+                  position: "relative",
+                  paddingBottom: "2px",
+                }}
+              >
+                {item.label}
+                {isActive(item.path) && (
+                  <span style={{
+                    position: "absolute",
+                    bottom: "-2px",
+                    left: 0,
+                    right: 0,
+                    height: "2px",
+                    borderRadius: "999px",
+                    background: "#c3f400",
+                  }} />
+                )}
+              </NavLink>
+            ))}
+          </nav>
 
-              return (
-                <li key={to}>
-                  <NavLink
-                    to={to}
-                    end={to === "/"}
-                    className="relative flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200"
-                    style={{
-                      color: isScan && !isActive
-                        ? "#fff"
-                        : isActive
-                        ? "var(--color-primary)"
-                        : "var(--color-text-secondary)",
-                      background: isScan && !isActive
-                        ? "linear-gradient(135deg, var(--color-primary), var(--color-accent))"
-                        : undefined,
-                    }}
-                  >
-                    {/* Animated active background pill */}
-                    {isActive && !isScan && (
-                      <motion.span
-                        layoutId="desktop-nav-pill"
-                        className="absolute inset-0 rounded-xl"
-                        style={{ background: "var(--color-primary-glow)" }}
-                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                      />
-                    )}
-                    <span className="relative z-10 flex items-center gap-1.5">
-                      <Icon size={16} />
-                      <span>{label}</span>
-                    </span>
-                  </NavLink>
-                </li>
-              );
-            })}
-          </ul>
-
-          {/* ── Right: Auth buttons + theme toggle ── */}
-          <div className="flex items-center gap-3 shrink-0">
-            {/* Sign In */}
-            <Button variant="ghost" size="lg">
-              Sign In
-            </Button>
-
-            {/* Register */}
-            <Button
-              size="lg"
-              className="shadow-md"
+          {/* Right: desktop + button + profile */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Desktop + button */}
+            <button
+              onClick={() => setActionOpen((o) => !o)}
+              className="hidden md:flex items-center gap-1.5 px-4 py-1.5 rounded-full"
               style={{
-                background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))",
-                color: "white",
-                boxShadow: "0 4px 16px var(--color-primary-glow)",
+                background: "#c3f400",
+                color: "#1a2200",
+                fontFamily: "'Inter', sans-serif",
+                fontWeight: 600,
+                fontSize: "13px",
+                letterSpacing: "0.02em",
+                border: "none",
+                cursor: "pointer",
+              }}
+              aria-label="Quick actions"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: "16px", lineHeight: 1 }}>add</span>
+              Add
+            </button>
+
+            {/* Profile avatar */}
+            <NavLink
+              to="/profile"
+              className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
+              style={{ border: "1.5px solid rgba(195,244,0,0.45)" }}
+              aria-label="Profile"
+            >
+              {user?.username ? (
+                <div className="w-full h-full flex items-center justify-center font-bold" style={{
+                  background: "rgba(195,244,0,0.12)",
+                  color: "#c3f400",
+                  fontFamily: "'Syne', sans-serif",
+                  fontSize: "12px",
+                }}>
+                  {user.username.charAt(0).toUpperCase()}
+                </div>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center" style={{ background: "rgba(195,244,0,0.08)" }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: "15px", color: "#c3f400" }}>person</span>
+                </div>
+              )}
+            </NavLink>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Mobile bottom tab bar ── */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-3 pb-safe-or-3 pt-1"
+        style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
+        aria-label="Mobile navigation"
+      >
+        <div
+          className="flex items-center rounded-2xl py-1.5"
+          style={{
+            background: "rgba(13, 16, 5, 0.97)",
+            backdropFilter: "blur(24px)",
+            border: "1px solid rgba(255,255,255,0.07)",
+            boxShadow: "0 -2px 24px rgba(0,0,0,0.55)",
+          }}
+        >
+          {/* Home tab */}
+          {[MOBILE_TABS[0]].map((item) => {
+            const active = isActive(item.path);
+            return (
+              <NavLink key={item.path} to={item.path}
+                className="flex flex-col items-center gap-0.5 flex-1 py-2 rounded-xl"
+                style={{ color: active ? "#c3f400" : "#8e9379" }}
+                aria-label={item.label}
+              >
+                <span className="material-symbols-outlined" style={{
+                  fontSize: "22px", lineHeight: 1,
+                  fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0",
+                }}>{item.icon}</span>
+                <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: active ? 600 : 400, letterSpacing: "0.01em", lineHeight: 1 }}>
+                  {item.label}
+                </span>
+              </NavLink>
+            );
+          })}
+
+          {/* Shop tab */}
+          {[MOBILE_TABS[1]].map((item) => {
+            const active = isActive(item.path);
+            return (
+              <NavLink key={item.path} to={item.path}
+                className="flex flex-col items-center gap-0.5 flex-1 py-2 rounded-xl"
+                style={{ color: active ? "#c3f400" : "#8e9379" }}
+                aria-label={item.label}
+              >
+                <span className="material-symbols-outlined" style={{
+                  fontSize: "22px", lineHeight: 1,
+                  fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0",
+                }}>{item.icon}</span>
+                <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: active ? 600 : 400, letterSpacing: "0.01em", lineHeight: 1 }}>
+                  {item.label}
+                </span>
+              </NavLink>
+            );
+          })}
+
+          {/* Centre + FAB */}
+          <div className="flex-1 flex items-center justify-center">
+            <button
+              onClick={() => setActionOpen((o) => !o)}
+              aria-label="Quick actions"
+              style={{
+                width: "46px",
+                height: "46px",
+                borderRadius: "50%",
+                background: actionOpen ? "#abd600" : "#c3f400",
+                color: "#1a2200",
+                border: "2px solid rgba(0,0,0,0.5)",
+                boxShadow: "0 4px 16px rgba(195,244,0,0.30)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                transform: actionOpen ? "rotate(45deg)" : "rotate(0deg)",
               }}
             >
-              Register
-            </Button>
-
-            {/* Theme toggle */}
-            <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
-              {theme === "light" ? <MoonIcon size={18} /> : <SunIcon size={18} />}
-            </Button>
+              <span className="material-symbols-outlined" style={{ fontSize: "22px", lineHeight: 1 }}>add</span>
+            </button>
           </div>
+
+          {/* History tab */}
+          {[MOBILE_TABS[2]].map((item) => {
+            const active = isActive(item.path);
+            return (
+              <NavLink key={item.path} to={item.path}
+                className="flex flex-col items-center gap-0.5 flex-1 py-2 rounded-xl"
+                style={{ color: active ? "#c3f400" : "#8e9379" }}
+                aria-label={item.label}
+              >
+                <span className="material-symbols-outlined" style={{
+                  fontSize: "22px", lineHeight: 1,
+                  fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0",
+                }}>{item.icon}</span>
+                <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: active ? 600 : 400, letterSpacing: "0.01em", lineHeight: 1 }}>
+                  {item.label}
+                </span>
+              </NavLink>
+            );
+          })}
+
+          {/* Profile tab */}
+          {[MOBILE_TABS[3]].map((item) => {
+            const active = isActive(item.path);
+            return (
+              <NavLink key={item.path} to={item.path}
+                className="flex flex-col items-center gap-0.5 flex-1 py-2 rounded-xl"
+                style={{ color: active ? "#c3f400" : "#8e9379" }}
+                aria-label={item.label}
+              >
+                {user?.username ? (
+                  <div style={{
+                    width: "22px", height: "22px", borderRadius: "50%",
+                    background: active ? "rgba(195,244,0,0.2)" : "rgba(255,255,255,0.06)",
+                    border: `1.5px solid ${active ? "#c3f400" : "rgba(255,255,255,0.15)"}`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "10px",
+                    color: active ? "#c3f400" : "#8e9379",
+                  }}>
+                    {user.username.charAt(0).toUpperCase()}
+                  </div>
+                ) : (
+                  <span className="material-symbols-outlined" style={{
+                    fontSize: "22px", lineHeight: 1,
+                    fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0",
+                  }}>{item.icon}</span>
+                )}
+                <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "10px", fontWeight: active ? 600 : 400, letterSpacing: "0.01em", lineHeight: 1 }}>
+                  {item.label}
+                </span>
+              </NavLink>
+            );
+          })}
         </div>
       </nav>
 
-      {/* ───── MOBILE NAV (bottom dock) ───── */}
-      <nav className="md:hidden fixed bottom-4 left-3 right-3 z-50 glass-card rounded-2xl shadow-xl">
-        <ul className="flex items-center justify-around py-2 px-1">
-          {navItems.map(({ to, label, icon: Icon }) => {
-            const isScan = to === "/scan";
-            const isActive = location.pathname === to;
+      {/* ── Action Sheet ── */}
+      <AnimatePresence>
+        {actionOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              style={{
+                position: "fixed", inset: 0, zIndex: 48,
+                background: "rgba(0,0,0,0.5)",
+                backdropFilter: "blur(4px)",
+              }}
+              onClick={() => setActionOpen(false)}
+            />
 
-            return (
-              <li key={to} className={isScan ? "-mt-7" : ""}>
-                <NavLink
-                  to={to}
-                  end={to === "/"}
-                  className="flex flex-col items-center gap-0.5"
+            {/* Sheet */}
+            <motion.div
+              key="sheet"
+              ref={sheetRef}
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ type: "spring", damping: 28, stiffness: 380 }}
+              style={{
+                position: "fixed",
+                bottom: "calc(env(safe-area-inset-bottom, 0px) + 80px)",
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 49,
+                background: "#1e2113",
+                border: "1px solid rgba(255,255,255,0.10)",
+                borderRadius: "20px",
+                padding: "8px",
+                minWidth: "260px",
+                boxShadow: "0 16px 48px rgba(0,0,0,0.6)",
+              }}
+            >
+              {ACTIONS.map((action) => (
+                <button
+                  key={action.path}
+                  onClick={() => { navigate(action.path); setActionOpen(false); }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    width: "100%",
+                    padding: "12px 16px",
+                    borderRadius: "12px",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "background 0.15s ease",
+                    textAlign: "left",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
-                  {isScan ? (
-                    /* Elevated Scan FAB with pulse glow */
-                    <motion.div
-                      className="flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg animate-pulse-glow"
-                      style={{ background: "linear-gradient(135deg, var(--color-primary), var(--color-accent))" }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <Icon size={24} />
-                    </motion.div>
-                  ) : (
-                    <span
-                      className="p-2 rounded-xl transition-colors"
-                      style={{ color: isActive ? "var(--color-primary)" : "var(--color-text-muted)" }}
-                    >
-                      <Icon size={22} />
+                  <div style={{
+                    width: "36px", height: "36px", borderRadius: "10px", flexShrink: 0,
+                    background: `${action.color}14`,
+                    border: `1px solid ${action.color}30`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: "18px", color: action.color, lineHeight: 1 }}>
+                      {action.icon}
                     </span>
-                  )}
-                  <span
-                    className="text-[10px] font-medium"
-                    style={{
-                      color: isScan || isActive ? "var(--color-primary)" : "var(--color-text-muted)",
-                      marginTop: isScan ? "4px" : "0",
-                    }}
-                  >
-                    {label}
+                  </div>
+                  <span style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: "#e2e4cf",
+                    lineHeight: 1,
+                  }}>
+                    {action.label}
                   </span>
-                </NavLink>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+                </button>
+              ))}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
-  );
-}
-
-/* =====================================================
-   SVG ICON COMPONENTS
-   Clean, consistent stroke icons (24×24 viewBox).
-   ===================================================== */
-
-function HomeIcon({ size = 24 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" />
-    </svg>
-  );
-}
-
-function ItemsIcon({ size = 24 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-      <rect x="14" y="14" width="7" height="7" rx="1" />
-    </svg>
-  );
-}
-
-function ScanIcon({ size = 24 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 7V5a2 2 0 012-2h2" />
-      <path d="M17 3h2a2 2 0 012 2v2" />
-      <path d="M21 17v2a2 2 0 01-2 2h-2" />
-      <path d="M7 21H5a2 2 0 01-2-2v-2" />
-      <line x1="3" y1="12" x2="21" y2="12" />
-    </svg>
-  );
-}
-
-function HistoryIcon({ size = 24 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
-    </svg>
-  );
-}
-
-function ProfileIcon({ size = 24 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-
-function MoonIcon({ size = 24 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" />
-    </svg>
-  );
-}
-
-function SunIcon({ size = 24 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="5" />
-      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-    </svg>
   );
 }

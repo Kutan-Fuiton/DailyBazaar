@@ -1,0 +1,35 @@
+{
+  "items": [
+    {
+      "item_name": "Milk",
+      "item_price": 50,
+      "amount": null,
+      "unit": null
+    },
+    {
+      "item_name": "Rice",
+      "item_price": 66,
+      "amount": null,
+      "unit": null
+    },
+    {
+      "item_name": "Oil",
+      "item_price": 128,
+      "amount": null,
+      "unit": null
+    },
+    {
+      "item_name": "Soap",
+      "item_price": 37,
+      "amount": null,
+      "unit": null
+    },
+    {
+      "item_name": "Potato",
+      "item_price": 30,
+      "amount": null,
+      "unit": null
+    }
+  ],
+  "total_amount": 311.0
+}

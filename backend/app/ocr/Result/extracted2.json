@@ -1,0 +1,40 @@
+{
+  "items": [
+    {
+      "item_name": "Jk Posto",
+      "item_price": 110.0,
+      "amount": 50
+    },
+    {
+      "item_name": "Chato",
+      "item_price": 80.0,
+      "amount": 500
+    },
+    {
+      "item_name": "Maggie",
+      "item_price": 82.0,
+      "amount": 1
+    },
+    {
+      "item_name": "Balosa",
+      "item_price": 30.0,
+      "amount": 300
+    },
+    {
+      "item_name": "Kachachola",
+      "item_price": 48.0,
+      "amount": 500
+    },
+    {
+      "item_name": "Refine oil",
+      "item_price": 128.0,
+      "amount": 1
+    },
+    {
+      "item_name": "Marrie biscuit",
+      "item_price": 50.0,
+      "amount": 1
+    }
+  ],
+  "total_amount": 528.0
+}

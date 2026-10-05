@@ -83,3 +83,21 @@ coverage/
 # Misc
 # =========================
 *.lock
+
+# =========================
+# Backend
+# =========================
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/venv/
+
+# HuggingFace model cache
+*.safetensors
+*.bin
+huggingface/
+
+
+VaniqDesign/*
+docs/*
+backend/docs/*
+frontend/docs/*

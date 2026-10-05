@@ -1,0 +1,33 @@
+# Web framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# Database
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.12
+pymysql==1.1.1
+cryptography==43.0.3
+
+# Validation & settings
+pydantic==2.9.2
+pydantic-settings==2.6.1
+pydantic[email]>=2.9.2
+python-dotenv==1.0.1
+
+# Auth
+pyjwt>=2.8.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+
+# File uploads
+python-multipart==0.0.12
+aiofiles==24.1.0
+pillow==11.0.0
+
+# Utils
+python-dateutil==2.9.0.post0
+rapidfuzz==3.10.1
+llama-cloud==2.13.0
+cachetools>=5.5.0
+slowapi>=0.1.10
+redis>=5.0.0

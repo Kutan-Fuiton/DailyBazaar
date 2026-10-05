@@ -6,7 +6,7 @@
 
 import { motion } from "framer-motion";
 import { formatCurrency, formatDate } from "../../../shared/utils";
-import type { Transaction } from "../TransactionsPage";
+import type { Transaction } from "../../../shared/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -18,11 +18,10 @@ interface Props {
 const statusVariant: Record<Transaction["status"], "default" | "secondary" | "destructive" | "outline"> = {
   completed: "default",
   pending: "secondary",
-  failed: "destructive",
 };
 
 export default function TransactionCard({ transaction }: Props) {
-  const { title, amount, date, status } = transaction;
+  const { title, total, created_at, status } = transaction;
 
   return (
     <motion.div
@@ -33,7 +32,7 @@ export default function TransactionCard({ transaction }: Props) {
         <CardContent className="flex items-center justify-between px-6 py-5">
           <div>
             <h3 className="text-base font-semibold text-foreground">{title}</h3>
-            <p className="mt-0.5 text-sm text-muted-foreground">{formatDate(date)}</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">{formatDate(created_at)}</p>
           </div>
           <div className="flex items-center gap-3">
             <Badge variant={statusVariant[status]} className="capitalize">
@@ -41,7 +40,7 @@ export default function TransactionCard({ transaction }: Props) {
             </Badge>
             <Separator orientation="vertical" className="h-8" />
             <span className="text-xl font-bold text-foreground">
-              {formatCurrency(amount)}
+              {formatCurrency(total)}
             </span>
           </div>
         </CardContent>

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { Transaction } from "../TransactionsPage";
+import type { Transaction } from "../../../shared/types";
 
 /**
  * Filter transactions by a search query (matches title, case-insensitive).

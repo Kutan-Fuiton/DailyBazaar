@@ -1,0 +1,166 @@
+/* Autocomplete.css — Styles for the shared Autocomplete dropdown */
+
+.ac-root {
+  position: relative;
+  width: 100%;
+}
+
+.ac-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ac-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 44px 12px 16px;
+  color: #f0f0f5;
+  font-size: 15px;
+  font-family: inherit;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.ac-input:focus {
+  border-color: rgba(139, 92, 246, 0.6);
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.ac-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.ac-spinner {
+  position: absolute;
+  right: 14px;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top-color: rgba(139, 92, 246, 0.8);
+  border-radius: 50%;
+  animation: ac-spin 0.6s linear infinite;
+}
+
+@keyframes ac-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Dropdown list */
+.ac-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  background: rgba(20, 18, 38, 0.97);
+  border: 1.5px solid rgba(139, 92, 246, 0.3);
+  border-radius: 14px;
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  max-height: 280px;
+  overflow-y: auto;
+  animation: ac-fade-in 0.12s ease;
+}
+
+@keyframes ac-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.ac-list::-webkit-scrollbar { width: 4px; }
+.ac-list::-webkit-scrollbar-track { background: transparent; }
+.ac-list::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.4); border-radius: 4px; }
+
+/* Each item row */
+.ac-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.13s;
+}
+
+.ac-item:hover,
+.ac-item--active {
+  background: rgba(139, 92, 246, 0.18);
+}
+
+.ac-emoji {
+  font-size: 18px;
+  flex-shrink: 0;
+  width: 22px;
+  text-align: center;
+}
+
+.ac-names {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.ac-display {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e8e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ac-resolution {
+  font-size: 12px;
+  color: rgba(255,255,255,0.38);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ac-resolution strong {
+  color: rgba(255,255,255,0.6);
+  font-weight: 500;
+}
+
+.ac-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ac-price {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(167, 243, 208, 0.9);
+  white-space: nowrap;
+}
+
+.ac-source {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 20px;
+  color: rgba(255,255,255,0.8);
+  white-space: nowrap;
+}
+
+/* Color tokens for source badges */
+:root {
+  --ac-alias:    rgba(245, 158, 11, 0.35);
+  --ac-personal: rgba(139, 92, 246, 0.35);
+  --ac-global:   rgba(59, 130, 246, 0.3);
+}
