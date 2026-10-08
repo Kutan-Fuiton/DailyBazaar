@@ -104,10 +104,15 @@ async def add_process_time_header(request: Request, call_next):
 # GZip compression for responses > 1KB (reduces payload transmission latency)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# CORS — allow frontend dev server
+# CORS — allow frontend dev servers and Vercel deployments
+allowed_origins = [
+    origin.strip() for origin in (settings.FRONTEND_URL or "").split(",") if origin.strip()
+] + ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL, "http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
+    allow_origins=list(set(allowed_origins)),
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
