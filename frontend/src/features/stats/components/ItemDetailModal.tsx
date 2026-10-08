@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { statsApi, type ItemFullStats } from "../../../shared/api/stats";
+import { MapPin } from "lucide-react";
 
 const LIME = "#c3f400";
 const SURFACE_CARD = "#161b0c";
@@ -190,8 +191,9 @@ export default function ItemDetailModal({ itemId, onClose }: ItemDetailModalProp
 
               {/* Location Comparison Table */}
               <div className="p-4 rounded-2xl bg-black/30 border border-white/5">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#8e9379] mb-2">
-                  🗺️ Location Price Comparison
+                <p className="text-xs font-bold uppercase tracking-wider text-[#8e9379] mb-2 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-[#c3f400]" />
+                  Location Price Comparison
                 </p>
                 {details.locations.length === 0 ? (
                   <p className="text-xs text-[#8e9379]">

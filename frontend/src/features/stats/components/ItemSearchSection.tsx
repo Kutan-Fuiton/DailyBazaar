@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { statsApi, type SearchItemResult } from "../../../shared/api/stats";
+import { User, Globe, X } from "lucide-react";
 
 const LIME = "#c3f400";
 const SURFACE_CARD = "rgba(26, 31, 15, 0.85)";
@@ -111,7 +112,9 @@ export default function ItemSearchSection({ onSelectItem }: ItemSearchSectionPro
             }`}
             style={{ cursor: "pointer", border: "none" }}
           >
-            👤 My Catalog
+            <span className="inline-flex items-center gap-1">
+              <User className="w-3.5 h-3.5" /> My Catalog
+            </span>
           </button>
           <button
             type="button"
@@ -121,7 +124,9 @@ export default function ItemSearchSection({ onSelectItem }: ItemSearchSectionPro
             }`}
             style={{ cursor: "pointer", border: "none" }}
           >
-            🌍 Global DB
+            <span className="inline-flex items-center gap-1">
+              <Globe className="w-3.5 h-3.5" /> Global DB
+            </span>
           </button>
         </div>
       </div>
@@ -149,10 +154,10 @@ export default function ItemSearchSection({ onSelectItem }: ItemSearchSectionPro
         {query && (
           <button
             onClick={() => setQuery("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#8e9379] hover:text-white"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#8e9379] hover:text-white flex items-center justify-center p-1"
             style={{ background: "none", border: "none", cursor: "pointer" }}
           >
-            ✕
+            <X className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
@@ -200,7 +205,15 @@ export default function ItemSearchSection({ onSelectItem }: ItemSearchSectionPro
                         color: isPersonal ? LIME : "#00dce5",
                       }}
                     >
-                      {isPersonal ? `👤 ${item.purchase_count}x bought` : "🌍 Global DB"}
+                      {isPersonal ? (
+                        <span className="inline-flex items-center gap-1">
+                          <User className="w-2.5 h-2.5" /> {item.purchase_count}x bought
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          <Globe className="w-2.5 h-2.5" /> Global DB
+                        </span>
+                      )}
                     </span>
                   </div>
                 </div>

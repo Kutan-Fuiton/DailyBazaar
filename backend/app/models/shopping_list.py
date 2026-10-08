@@ -47,8 +47,9 @@ class ShoppingList(Base):
     completed_at = Column(DateTime, nullable=True)  # set when status → COMPLETED
 
     # Relationships
-    user  = relationship("User", back_populates="shopping_lists")
-    items = relationship("ListItem", back_populates="shopping_list", cascade="all, delete-orphan")
+    user          = relationship("User", back_populates="shopping_lists")
+    items         = relationship("ListItem", back_populates="shopping_list", cascade="all, delete-orphan")
+    collaborators = relationship("ShoppingListCollaborator", back_populates="shopping_list", cascade="all, delete-orphan")
 
 
 class ListItem(Base):
@@ -73,3 +74,20 @@ class ListItem(Base):
     # Relationships
     shopping_list = relationship("ShoppingList", back_populates="items")
     item          = relationship("Item")
+
+
+class ShoppingListCollaborator(Base):
+    """
+    Householder collaborators on this list.
+    Collaborators have real-time synchronized access to view and check off items.
+    """
+    __tablename__ = "shopping_list_collaborators"
+
+    id               = Column(Integer, primary_key=True, autoincrement=True)
+    shopping_list_id = Column(Integer, ForeignKey("shopping_lists.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id          = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    role             = Column(String(50), default="member", nullable=False)
+    created_at       = Column(DateTime, server_default=func.now())
+
+    shopping_list = relationship("ShoppingList", back_populates="collaborators")
+    user          = relationship("User")

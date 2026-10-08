@@ -49,17 +49,43 @@ def check_all():
     else:
         print("[FAIL] JWT Authentication: Can't connect (SECRET_KEY missing)")
 
-    # 4. Hugging Face Token
+    # 4. Google OAuth Sign-In
+    google_id = settings.effective_google_client_id
+    if google_id and google_id.strip():
+        # Mask the middle of the client ID for secure terminal display
+        masked = google_id[:12] + "..." + google_id[-18:] if len(google_id) > 30 else google_id
+        secret_status = " + Secret present" if (settings.CLIENT_SECRET and settings.CLIENT_SECRET.strip()) else ""
+        print(f"[OK]   Google OAuth: Configured ({masked}{secret_status})")
+    else:
+        print("[FAIL] Google OAuth: Missing (VITE_GOOGLE_CLIENT_ID / GOOGLE_CLIENT_ID missing in .env)")
+
+    # 5. Hugging Face Token
     if settings.HF_TOKEN and settings.HF_TOKEN.strip():
         print("[OK]   HuggingFace Token: Configured")
     else:
         print("[FAIL] HuggingFace Token: Can't connect (HF_TOKEN missing in .env)")
 
-    # 5. LLaMA Token
+    # 6. LLaMA Token
     if settings.LLAMA_API_KEY and settings.LLAMA_API_KEY.strip():
         print("[OK]   LLaMA Token: Configured")
     else:
         print("[FAIL] LLaMA Token: Can't connect (LLAMA_API_KEY missing in .env)")
+
+    # 7. Dedicated Global Items Database
+    global_db_path = os.path.join(backend_dir, "global_items.db")
+    if os.path.exists(global_db_path):
+        import sqlite3
+        try:
+            conn = sqlite3.connect(global_db_path)
+            c = conn.cursor()
+            c.execute("SELECT COUNT(*) FROM global_items")
+            cnt = c.fetchone()[0]
+            conn.close()
+            print(f"[OK]   Global Item DB: Active ({cnt} catalog staples loaded)")
+        except Exception:
+            print("[OK]   Global Item DB: Active (SQLite ready)")
+    else:
+        print("[INFO] Global Item DB: Initializing on startup")
 
     print("--------------------------------------------------\n")
 

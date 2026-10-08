@@ -7,13 +7,13 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Loader from "../../shared/components/Loader";
 import { formatCurrency } from "../../shared/utils";
 import { scanApi } from "../../shared/api/scan";
 import { ApiError } from "../../shared/api/client";
-import ShoppingListView from "./components/ShoppingListView";
-import NotepadMode from "./NotepadMode";
+import { Coins } from "lucide-react";
 
 const LIME = "#c3f400";
 const CYAN = "#00dce5";
@@ -45,7 +45,6 @@ interface ScannedItem {
 import { useDraftManager } from "../../shared/hooks/useDraftManager";
 
 type ScanState = "idle" | "scanning" | "result";
-type PageMode = "SCAN" | "LIST" | "NOTEPAD";
 
 const SCAN_STEPS = ["Uploading image…", "Running OCR scan…", "Extracting items…", "Almost done…"];
 
@@ -61,25 +60,12 @@ function sanitizeQtyString(rawStr: string): string {
 }
 
 export default function ScanPage() {
+  const navigate = useNavigate();
   const {
-    mode: activeGlobalMode,
-    setMode: setGlobalMode,
     scanDraft,
     saveScanDraft,
     clearScanDraft,
   } = useDraftManager();
-
-  const [pageMode, setPageMode] = useState<PageMode>(() => {
-    try {
-      const searchParam = new URLSearchParams(window.location.search).get("mode");
-      if (searchParam === "list") return "LIST";
-      if (searchParam === "notepad") return "NOTEPAD";
-      if (searchParam === "scan") return "SCAN";
-    } catch {}
-    if (activeGlobalMode === "list") return "LIST";
-    if (activeGlobalMode === "notepad") return "NOTEPAD";
-    return "SCAN";
-  });
 
   const [state, setState]       = useState<ScanState>("idle");
   const [items, setItems]       = useState<ScannedItem[]>([]);
@@ -338,7 +324,7 @@ async function compressAndValidateImage(file: File): Promise<File> {
       setItems([]);
       setScanId(null);
       setScanTitle("");
-      alert("✅ Bill saved to transactions successfully!");
+      navigate("/profile?tab=history");
     } catch (e) {
       alert(e instanceof ApiError ? e.message : "Failed to save transaction");
     }
@@ -366,100 +352,44 @@ async function compressAndValidateImage(file: File): Promise<File> {
 
       <div className="page-container pt-20 pb-24 relative z-10">
 
-        {/* ── TOP SECTION CONTROLLER (Hero Segmented Control) ── */}
-        <div className="mb-10">
-          <div
-            className="w-full grid grid-cols-1 sm:grid-cols-3 gap-2 p-2 rounded-2xl"
-            style={{
-              background: "rgba(24,28,14,0.92)",
-              border: "1px solid rgba(255,255,255,0.10)",
-              backdropFilter: "blur(20px)",
-              boxShadow: "0 10px 40px rgba(0,0,0,0.6), 4px 4px 0px #000",
-            }}
-          >
-            {[
-              { id: "SCAN", title: "Scan Bill", sub: "OCR receipt parser (Default)", icon: "photo_camera" },
-              { id: "LIST", title: "Shopping List", sub: "Bazaar list planning", icon: "checklist" },
-              { id: "NOTEPAD", title: "Bazaar Khata", sub: "Digital Ledger · Smart Fard", icon: "menu_book" },
-            ].map((tab) => {
-              const isActive = pageMode === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    const m = tab.id as PageMode;
-                    setPageMode(m);
-                    setGlobalMode(m.toLowerCase() as any);
-                    setScanError("");
-                  }}
-                  className="relative p-3.5 sm:p-4 rounded-xl text-left transition-all flex items-center gap-3.5 z-10 select-none overflow-hidden"
-                  style={{
-                    color: isActive ? "#111508" : "#a1a68d",
-                  }}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeHeroScanTab"
-                      className="absolute inset-0 rounded-xl"
-                      style={{
-                        background: LIME,
-                        boxShadow: "0 4px 20px rgba(195,244,0,0.35)",
-                      }}
-                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                    />
-                  )}
-                  <span
-                    className="material-symbols-outlined text-2xl sm:text-3xl relative z-10 flex-shrink-0"
-                    style={{ color: isActive ? "#111508" : LIME }}
-                  >
-                    {tab.icon}
-                  </span>
-                  <div className="relative z-10 min-w-0">
-                    <p
-                      className="font-black text-sm sm:text-base uppercase tracking-tight truncate"
-                      style={{ fontFamily: "'Syne', sans-serif" }}
-                    >
-                      {tab.title}
-                    </p>
-                    <p
-                      className="text-[10px] sm:text-[11px] font-medium truncate"
-                      style={{
-                        fontFamily: "'Inter', sans-serif",
-                        color: isActive ? "#283500" : "#8e9379",
-                      }}
-                    >
-                      {tab.sub}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ── SECTION 1: OCR BILL SCAN ── */}
-        {pageMode === "SCAN" && (
+        {/* Dedicated Scan Header with Direct Navigation Button to Shopping Lists */}
+        <motion.div variants={fadeUp} initial="hidden" animate="show" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            {/* Header */}
-            <motion.div variants={fadeUp} initial="hidden" animate="show" className="mb-8">
-              <p className="text-[10px] uppercase tracking-[0.3em] mb-1 font-mono" style={{ color: LIME }}>
-                OCR Intelligence
+            <p className="text-[10px] uppercase tracking-[0.3em] mb-1 font-mono" style={{ color: LIME }}>
+              OCR Intelligence · Bill Ingestion
+            </p>
+            <h1 className="text-3xl sm:text-5xl font-black uppercase italic" style={{ fontFamily: "'Syne', sans-serif", color: "#e2e4cf" }}>
+              TRACK YOUR <span style={{ color: LIME }}>BAZAAR</span>
+            </h1>
+            <p className="mt-2 text-sm max-w-lg" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: "#c4c9ac" }}>
+              Drop a receipt photo or PDF. VANIQ parses every item, quantity, and unit price with precision.
+            </p>
+            {scanError && (
+              <p className="mt-3 text-xs px-3.5 py-2 rounded-xl inline-block bg-red-500/10 border border-red-500/30 text-red-300">
+                {scanError}
               </p>
-              <h1 className="text-4xl sm:text-6xl font-black uppercase italic" style={{ fontFamily: "'Syne', sans-serif", color: "#e2e4cf" }}>
-                TRACK YOUR <span style={{ color: LIME }}>BAZAAR</span>
-              </h1>
-              <p className="mt-2 text-sm max-w-lg" style={{ fontFamily: "'Hanken Grotesk', sans-serif", color: "#c4c9ac" }}>
-                Drop a receipt photo or PDF. VANIQ parses every item, quantity, and unit price with precision.
-              </p>
-              {scanError && (
-                <p className="mt-3 text-xs px-3.5 py-2 rounded-xl inline-block bg-red-500/10 border border-red-500/30 text-red-300">
-                  {scanError}
-                </p>
-              )}
-            </motion.div>
+            )}
+          </div>
 
-            {/* Split layout */}
-            <div className="flex flex-col xl:flex-row gap-8 items-start">
+          <div className="flex items-center gap-3 self-start sm:self-auto">
+            <button
+              onClick={() => navigate("/shop")}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all hover:bg-white/10"
+              style={{
+                background: "rgba(195,244,0,0.08)",
+                border: "1px solid rgba(195,244,0,0.25)",
+                color: LIME,
+              }}
+            >
+              <span className="material-symbols-outlined text-base">checklist</span>
+              <span>Go to Shopping Lists</span>
+            </button>
+          </div>
+        </motion.div>
+
+        <div>
+          {/* Split layout */}
+          <div className="flex flex-col xl:flex-row gap-8 items-start">
               {/* Left Area: Dropzone / Loader / Result Table */}
               <div className="flex-1 min-w-0 w-full">
                 <AnimatePresence mode="wait">
@@ -652,85 +582,24 @@ async function compressAndValidateImage(file: File): Promise<File> {
                   <div className="flex flex-col gap-2">
                     <button
                       onClick={handleSaveScan}
-                      className="w-full py-3.5 rounded-xl font-black uppercase text-sm brutal-btn"
+                      className="w-full py-3.5 rounded-xl font-black uppercase text-sm brutal-btn flex items-center justify-center gap-2 cursor-pointer"
                       style={{ background: LIME, color: "#111508", fontFamily: "'Syne', sans-serif" }}
                     >
-                      Bag Secured 💸
+                      <Coins className="w-4 h-4 text-[#111508]" />
+                      <span>Bag Secured</span>
                     </button>
                     <button
                       onClick={handleDiscardScanDraft}
-                      className="w-full py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider text-red-400/80 hover:text-red-400 hover:bg-red-500/10 transition-colors border border-transparent hover:border-red-500/20"
+                      className="w-full py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider text-red-400/80 hover:text-red-400 hover:bg-red-500/10 transition-colors border border-transparent hover:border-red-500/20 cursor-pointer"
                     >
                       Discard Draft
                     </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
-        )}
-
-        {/* ── SECTION 2: BAZAAR PLANNING (Shopping Lists) ── */}
-        {pageMode === "LIST" && (
-          <div>
-            <motion.div variants={fadeUp} initial="hidden" animate="show" className="mb-8">
-              <p className="text-[10px] uppercase tracking-[0.3em] mb-1 font-mono" style={{ color: LIME }}>
-                Market Logistics
-              </p>
-              <h1 className="text-4xl sm:text-6xl font-black uppercase italic" style={{ fontFamily: "'Syne', sans-serif", color: "#e2e4cf" }}>
-                BAZAAR <span style={{ color: LIME }}>PLANNING</span>
-              </h1>
-              <p className="mt-2 text-sm max-w-lg" style={{ fontFamily: "'Inter', sans-serif", color: "#c4c9ac" }}>
-                Create grocery lists via quick text paste, check off items in the bazaar, and convert them to transactions with one tap.
-              </p>
-            </motion.div>
-
-            <ShoppingListView />
-          </div>
-        )}
-
-        {/* ── SECTION 3: BAZAAR KHATA (Smart Canvas Ledger) ── */}
-        {pageMode === "NOTEPAD" && (
-          <div>
-            <motion.div variants={fadeUp} initial="hidden" animate="show" className="mb-6">
-              <p className="text-[10px] uppercase tracking-[0.3em] mb-1 font-mono" style={{ color: LIME }}>
-                Digital Bazaar Ledger
-              </p>
-              <h1 className="text-4xl sm:text-6xl font-black uppercase italic" style={{ fontFamily: "'Syne', sans-serif", color: "#e2e4cf" }}>
-                BAZAAR <span style={{ color: LIME }}>KHATA</span>
-              </h1>
-              <p className="mt-2 text-sm max-w-lg" style={{ fontFamily: "'Inter', sans-serif", color: "#c4c9ac" }}>
-                Interactive digital memo pad (বাজার খাতা). Jot down items shop-by-shop — checkpoints auto-create on each line with instant intelligent pricing.
-              </p>
-            </motion.div>
-            <div
-              className="rounded-3xl overflow-hidden"
-              style={{
-                background: "rgba(11, 15, 23, 0.94)",
-                border: "1px solid rgba(195, 244, 0, 0.22)",
-                boxShadow: "0 24px 60px rgba(0, 0, 0, 0.7), 0 0 35px rgba(195, 244, 0, 0.05)",
-                backdropFilter: "blur(24px)",
-                minHeight: "560px",
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <NotepadMode
-                onDone={(_listId) => {
-                  setPageMode("LIST");
-                  setGlobalMode("list");
-                }}
-                onCancel={() => {
-                  setPageMode("SCAN");
-                  setGlobalMode("scan");
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-      </div>
-    </div>
+        </div>
   );
-
 }

@@ -12,9 +12,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { itemsApi } from "../../shared/api/items";
-import type { Item, ItemCreate, GlobalCatalogItem } from "../../shared/types";
+import { globalItemsApi, type GlobalItem } from "../../shared/api/globalItems";
+import type { Item, ItemCreate } from "../../shared/types";
 import ItemDetailDrawer from "./ItemDetailDrawer";
 import ItemAutocomplete from "./components/ItemAutocomplete";
+import { Plus, Check } from "lucide-react";
 
 const LIME     = "#c3f400";
 const CYAN     = "#00dce5";
@@ -32,12 +34,14 @@ export default function ItemsPage() {
   const [selectedItem,   setSelectedItem]   = useState<Item | null>(null);
   const [searchQuery,    setSearchQuery]    = useState("");
 
-  // ── Global Catalog State ──
-  const [activeTab,      setActiveTab]      = useState<"INVENTORY" | "GLOBAL">("INVENTORY");
-  const [globalItems,    setGlobalItems]    = useState<GlobalCatalogItem[]>([]);
-  const [globalLoading,  setGlobalLoading]  = useState(false);
-  const [globalSearch,   setGlobalSearch]   = useState("");
-  const [importingId,    setImportingId]    = useState<number | null>(null);
+  // ── Bazaar Global Catalog State ──
+  const [activeTab,           setActiveTab]           = useState<"INVENTORY" | "GLOBAL">("INVENTORY");
+  const [globalItems,         setGlobalItems]         = useState<GlobalItem[]>([]);
+  const [globalLoading,       setGlobalLoading]       = useState(false);
+  const [globalSearch,        setGlobalSearch]        = useState("");
+  const [globalCategory,      setGlobalCategory]      = useState("All");
+  const [globalCategories,    setGlobalCategories]    = useState<{ category: string; count: number }[]>([]);
+  const [importingId,         setImportingId]         = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -49,13 +53,18 @@ export default function ItemsPage() {
     }
   }, []);
 
-  const loadGlobal = useCallback(async (query: string = "") => {
+  const loadGlobal = useCallback(async (query: string = "", category: string = "All") => {
     setGlobalLoading(true);
     try {
-      const data = await itemsApi.listGlobal(query);
-      setGlobalItems(data);
+      const data = await globalItemsApi.list({
+        search: query.trim() || undefined,
+        category: category !== "All" ? category : undefined,
+      });
+      setGlobalItems(data.items);
+      const catRes = await globalItemsApi.getCategories();
+      setGlobalCategories(catRes);
     } catch (e) {
-      console.error("Failed to load global catalog:", e);
+      console.warn("Could not load catalog items:", e);
     } finally {
       setGlobalLoading(false);
     }
@@ -65,19 +74,25 @@ export default function ItemsPage() {
 
   useEffect(() => {
     if (activeTab === "GLOBAL") {
-      const timer = setTimeout(() => loadGlobal(globalSearch), 300);
+      const timer = setTimeout(() => loadGlobal(globalSearch, globalCategory), 250);
       return () => clearTimeout(timer);
     }
-  }, [activeTab, globalSearch, loadGlobal]);
+  }, [activeTab, globalSearch, globalCategory, loadGlobal]);
 
-  const handleImportFromGlobal = async (entry: GlobalCatalogItem) => {
+  const handleImportFromGlobal = async (entry: GlobalItem) => {
     setImportingId(entry.id);
     try {
-      const imported = await itemsApi.importFromGlobal(entry.id);
-      setItems((prev) => [imported, ...prev.filter((i) => i.id !== imported.id)]);
-      alert(`✅ Added "${entry.name}" to your inventory with tag "Not Bought Yet"!`);
+      const created = await itemsApi.create({
+        name: entry.name,
+        category: entry.category,
+        unit: entry.default_unit,
+        price_per_unit: entry.price_per_unit ?? undefined,
+        emoji: entry.emoji || "🛒",
+        description: entry.description || undefined,
+      });
+      setItems((prev) => [created, ...prev.filter((i) => i.id !== created.id)]);
     } catch (err: any) {
-      alert(err?.message || "Failed to add item to inventory");
+      alert(err?.message || "Could not add item to inventory");
     } finally {
       setImportingId(null);
     }
@@ -103,23 +118,6 @@ export default function ItemsPage() {
       setItems((prev) => prev.filter((i) => i.id !== id));
     } finally {
       setDeleting(null);
-    }
-  };
-
-  const handleSeedStaples = async () => {
-    const staples = [
-      { name: "Potato", emoji: "🥔", category: "Vegetables", unit: "kg", price_per_unit: 25 },
-      { name: "Onion", emoji: "🧅", category: "Vegetables", unit: "kg", price_per_unit: 35 },
-      { name: "Milk", emoji: "🥛", category: "Dairy", unit: "L", price_per_unit: 62 },
-    ];
-    setLoading(true);
-    try {
-      for (const s of staples) {
-        await itemsApi.create(s);
-      }
-      await load();
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -192,8 +190,8 @@ export default function ItemsPage() {
                 boxShadow: activeTab === "GLOBAL" ? "3px 3px 0px #000" : "none",
               }}
             >
-              <span className="material-symbols-outlined text-base">public</span>
-              Global Catalog
+              <span className="material-symbols-outlined text-base">storefront</span>
+              Bazaar Catalog
             </button>
           </div>
         </motion.div>
@@ -272,13 +270,14 @@ export default function ItemsPage() {
                   + Add Custom Item
                 </button>
                 <button
-                  onClick={handleSeedStaples}
-                  className="px-5 py-2.5 rounded-full font-bold text-xs bg-white/10 text-white hover:bg-white/15 transition"
+                  onClick={() => setActiveTab("GLOBAL")}
+                  className="px-5 py-2.5 rounded-full font-bold text-xs bg-white/10 text-white hover:bg-white/15 transition flex items-center gap-1.5"
                   style={{
                     fontFamily: "'Syne', sans-serif",
                   }}
                 >
-                  ⚡ Load Common Staples
+                  <span className="material-symbols-outlined text-sm text-[#c3f400]">storefront</span>
+                  Browse Bazaar Catalog
                 </button>
               </div>
             )}
@@ -380,25 +379,54 @@ export default function ItemsPage() {
       </div>
     )}
 
-    {/* ── VIEW 2: GLOBAL MASTER BAZAAR CATALOG ── */}
+    {/* ── VIEW 2: BAZAAR CATALOG ── */}
     {activeTab === "GLOBAL" && (
       <div>
-        {/* Search across English, Bengali, Hindi, and Aliases */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-8 max-w-2xl">
-          <div className="relative flex-1">
+        {/* Search & Category Filter */}
+        <div className="flex flex-col lg:flex-row gap-4 mb-6 justify-between items-stretch lg:items-center">
+          <div className="relative flex-1 max-w-xl">
             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-white/40 text-lg">
               search
             </span>
             <input
               type="text"
-              placeholder="Search master catalog in English, বাংলা, हिंदी, or local names (e.g. sorsher tel)..."
+              placeholder="Search bazaar catalog across English, বাংলা, हिंदी, or brand..."
               value={globalSearch}
               onChange={(e) => setGlobalSearch(e.target.value)}
               className="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white text-sm focus:border-lime-400/50 outline-none"
-              style={{ fontFamily: "'Hanken Grotesk', sans-serif" }}
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             />
           </div>
         </div>
+
+        {/* Category Filter Chips */}
+        {globalCategories.length > 0 && (
+          <div className="flex gap-2 flex-wrap mb-6">
+            <button
+              onClick={() => setGlobalCategory("All")}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-mono uppercase transition-all ${
+                globalCategory === "All"
+                  ? "bg-[#c3f400] text-black font-bold shadow-md"
+                  : "bg-white/5 text-[#8e9379] hover:bg-white/10"
+              }`}
+            >
+              All Categories
+            </button>
+            {globalCategories.map((c) => (
+              <button
+                key={c.category}
+                onClick={() => setGlobalCategory(c.category)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-mono uppercase transition-all ${
+                  globalCategory === c.category
+                    ? "bg-[#c3f400] text-black font-bold shadow-md"
+                    : "bg-white/5 text-[#8e9379] hover:bg-white/10"
+                }`}
+              >
+                {c.category} ({c.count})
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Global Catalog Grid */}
         {globalLoading ? (
@@ -412,15 +440,15 @@ export default function ItemsPage() {
             ))}
           </div>
         ) : globalItems.length === 0 ? (
-          <div className="glass-card p-12 flex flex-col items-center gap-4 text-center max-w-lg mx-auto">
-            <span className="material-symbols-outlined text-5xl" style={{ color: "#444933", fontSize: "48px" }}>
-              travel_explore
+          <div className="glass-card p-12 flex flex-col items-center gap-4 text-center max-w-lg mx-auto rounded-3xl border border-white/10 my-8">
+            <span className="material-symbols-outlined text-5xl text-[#8e9379]">
+              storefront
             </span>
-            <p style={{ fontFamily: "'Syne', sans-serif", color: "#e2e4cf", fontSize: "18px", fontWeight: 700 }}>
-              No master catalog items found
-            </p>
-            <p className="text-sm text-[#8e9379]">
-              Try searching for another grocery staple or regional romanization.
+            <h3 className="font-bold text-xl text-white uppercase tracking-wide" style={{ fontFamily: "'Syne', sans-serif" }}>
+              Bazaar Catalog
+            </h3>
+            <p className="text-sm text-[#8e9379] font-sans">
+              No catalog items match your search. Try searching for other staples or add custom items to your inventory.
             </p>
           </div>
         ) : (
@@ -433,7 +461,7 @@ export default function ItemsPage() {
               return (
                 <div
                   key={entry.id}
-                  className="glass-card p-6 flex flex-col justify-between group relative"
+                  className="glass-card p-6 flex flex-col justify-between group relative rounded-2xl border border-white/10"
                   style={{ boxShadow: "4px 4px 0px #000" }}
                 >
                   <div>
@@ -450,37 +478,75 @@ export default function ItemsPage() {
                       {entry.name}
                     </h3>
 
+                    {/* Brand / Subcategory */}
+                    {(entry.brand || entry.sub_category) && (
+                      <p className="text-[10px] font-mono uppercase text-[#00dce5] mb-2">
+                        {[entry.brand, entry.sub_category].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
+
+                    {/* Regional scripts */}
                     <div className="flex items-center gap-2 text-xs text-[#a1a68d] mb-3">
-                      {entry.bengali_name && <span className="bg-lime-400/10 text-lime-300 px-2 py-0.5 rounded-md font-medium">{entry.bengali_name}</span>}
-                      {entry.hindi_name && <span className="bg-cyan-400/10 text-cyan-300 px-2 py-0.5 rounded-md font-medium">{entry.hindi_name}</span>}
+                      {entry.bengali_name && (
+                        <span className="bg-lime-400/10 text-lime-300 px-2 py-0.5 rounded-md font-medium text-[11px]">
+                          বাংলা: {entry.bengali_name}
+                        </span>
+                      )}
+                      {entry.hindi_name && (
+                        <span className="bg-cyan-400/10 text-cyan-300 px-2 py-0.5 rounded-md font-medium text-[11px]">
+                          हिंदी: {entry.hindi_name}
+                        </span>
+                      )}
                     </div>
 
-                    {/* Benchmark Price */}
-                    {entry.avg_price_kg != null && (
-                      <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 mb-3 flex items-center justify-between">
-                        <span className="text-[10px] font-mono uppercase text-white/40">Market Benchmark</span>
+                    {/* Pricing Info */}
+                    <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 mb-3 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-mono uppercase text-white/40 block">Market Benchmark</span>
                         <span className="font-mono font-bold text-sm text-lime-400">
-                          ₹{Math.round(entry.avg_price_kg)} / {entry.unit}
+                          {entry.price_per_unit != null ? `₹${entry.price_per_unit}` : "—"} / {entry.default_unit}
                         </span>
+                      </div>
+                      {entry.mrp != null && (
+                        <div className="text-right">
+                          <span className="text-[10px] font-mono uppercase text-white/40 block">MRP</span>
+                          <span className="font-mono text-xs text-white/70">₹{entry.mrp}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Typical Price Range & Shelf Life */}
+                    {(entry.typical_price_range || entry.shelf_life) && (
+                      <div className="flex justify-between text-[10px] font-mono text-[#8e9379] mb-3">
+                        {entry.typical_price_range && <span>Range: {entry.typical_price_range}</span>}
+                        {entry.shelf_life && <span>Life: {entry.shelf_life}</span>}
                       </div>
                     )}
 
                     {/* Aliases */}
-                    {entry.aliases && entry.aliases.length > 0 && (
+                    {entry.aliases && (
                       <div className="flex flex-wrap gap-1 mb-4">
-                        {entry.aliases.slice(0, 4).map((al, idx) => (
+                        {entry.aliases.split(",").slice(0, 4).map((al, idx) => (
                           <span key={idx} className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-white/5 text-white/50">
-                            {al}
+                            {al.trim()}
                           </span>
                         ))}
                       </div>
+                    )}
+
+                    {/* Description */}
+                    {entry.description && (
+                      <p className="text-xs text-white/60 mb-4 line-clamp-2">
+                        {entry.description}
+                      </p>
                     )}
                   </div>
 
                   {/* Add Button */}
                   {alreadyInInventory ? (
-                    <div className="w-full py-2.5 rounded-xl text-xs font-bold font-mono text-center bg-white/10 text-white/60 border border-white/10">
-                      ✓ In Your Inventory
+                    <div className="w-full py-2.5 rounded-xl text-xs font-bold font-mono text-center bg-white/10 text-white/60 border border-white/10 flex items-center justify-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-[#c3f400]" />
+                      In Your Inventory
                     </div>
                   ) : (
                     <button
@@ -494,7 +560,7 @@ export default function ItemsPage() {
                         boxShadow: "2px 2px 0px #000",
                       }}
                     >
-                      <span className="material-symbols-outlined text-sm">add</span>
+                      <Plus className="w-3.5 h-3.5" />
                       {importingId === entry.id ? "Adding…" : "Add to My Inventory"}
                     </button>
                   )}

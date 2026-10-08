@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { Item } from "../../../shared/types";
 import { formatCurrency } from "../../../shared/utils";
+import { Tag } from "lucide-react";
 
 interface ItemAutocompleteProps {
   value: string;
@@ -83,7 +84,9 @@ export default function ItemAutocomplete({
                 className="w-full px-3 py-2 text-left hover:bg-lime-400/10 transition flex items-center justify-between group"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-base">{item.emoji || "🏷️"}</span>
+                  <span className="text-base flex items-center justify-center">
+                    {item.emoji ? item.emoji : <Tag className="w-3.5 h-3.5 text-[#c3f400]" />}
+                  </span>
                   <div className="truncate">
                     <span className="text-xs font-bold text-white group-hover:text-lime-300 transition block truncate">
                       {item.name}

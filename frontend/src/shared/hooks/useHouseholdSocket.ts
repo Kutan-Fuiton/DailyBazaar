@@ -8,20 +8,23 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { authToken } from "../api/client";
 
 export interface HouseholdWSEvent {
-  type: "ITEM_ADDED" | "ITEM_TOGGLED" | "ITEM_DELETED" | "ALL_BOUGHT" | "USER_CONNECTED" | "USER_DISCONNECTED" | string;
-  household_id: number;
+  type: "ITEM_ADDED" | "ITEM_TOGGLED" | "ITEM_DELETED" | "ALL_BOUGHT" | "COLLABORATOR_ADDED" | "COLLABORATOR_REMOVED" | "USER_CONNECTED" | "USER_DISCONNECTED" | string;
+  household_id?: number;
+  list_id?: number;
   sender_user_id?: number;
   data: Record<string, any>;
 }
 
 interface UseHouseholdSocketOptions {
   householdId?: number | null;
+  listId?: number | null;
   onEvent?: (event: HouseholdWSEvent) => void;
   enabled?: boolean;
 }
 
 export function useHouseholdSocket({
   householdId,
+  listId,
   onEvent,
   enabled = true,
 }: UseHouseholdSocketOptions) {
@@ -33,12 +36,14 @@ export function useHouseholdSocket({
 
   const connect = useCallback(() => {
     const token = authToken.get();
-    if (!enabled || !householdId || !token) return;
+    const targetId = listId || householdId;
+    if (!enabled || !targetId || !token) return;
 
     // Build WS URL relative to current host or API host
     const apiBase = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
     const wsBase = apiBase.replace(/^http/, "ws");
-    const url = `${wsBase}/api/v1/ws/household/${householdId}?token=${encodeURIComponent(token)}`;
+    const endpoint = listId ? `list/${listId}` : `household/${householdId}`;
+    const url = `${wsBase}/api/v1/ws/${endpoint}?token=${encodeURIComponent(token)}`;
 
     try {
       const ws = new WebSocket(url);
@@ -80,7 +85,7 @@ export function useHouseholdSocket({
     } catch (e) {
       console.warn("[WS] Connection attempt failed:", e);
     }
-  }, [enabled, householdId, onEvent]);
+  }, [enabled, householdId, listId, onEvent]);
 
   useEffect(() => {
     connect();

@@ -69,5 +69,17 @@ class Settings(BaseSettings):
     LLAMA_API_KEY: str = ""
     OCR_ITEMS_JSON: str = "app/ocr/items.json"
 
+    # Google OAuth / Sign-In
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    VITE_GOOGLE_CLIENT_ID: Optional[str] = None
+    CLIENT_SECRET: Optional[str] = None
+
+    @property
+    def effective_google_client_id(self) -> Optional[str]:
+        return self.GOOGLE_CLIENT_ID or self.VITE_GOOGLE_CLIENT_ID
+
+    # Dedicated Global Items Database
+    GLOBAL_ITEMS_DB_URL: str = "sqlite:///./global_items.db"
+
 
 settings = Settings()

@@ -20,9 +20,6 @@ export const authApi = {
       body: { credential },
     }),
 
-  /** One-click demo login — no credentials needed. */
-  demoLogin: () =>
-    client<TokenResponse>("/auth/demo", { method: "POST" }),
 
   refresh: (refreshToken: string) =>
     client<TokenResponse>("/auth/refresh", {

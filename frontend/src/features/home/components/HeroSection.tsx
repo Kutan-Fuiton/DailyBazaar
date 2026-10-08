@@ -5,7 +5,7 @@ import { scanApi } from "../../../shared/api/scan";
 import { useDraftManager } from "../../../shared/hooks/useDraftManager";
 
 const LIME = "#c3f400";
-const BORDER_COLOR = "rgba(195, 244, 0, 0.18)";
+const CYAN = "#00dce5";
 
 export default function HeroSection() {
   const navigate = useNavigate();
@@ -15,11 +15,8 @@ export default function HeroSection() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {
-    mode,
-    setMode,
     hasScanDraft,
     scanDraft,
-    hasNotepadDraft,
     hasListDraft,
   } = useDraftManager();
 
@@ -153,153 +150,64 @@ export default function HeroSection() {
         transition={{ duration: 0.45, delay: 0.22 }}
         className="w-full max-w-sm flex flex-col items-center gap-3"
       >
-        {/* Mode Selector Dropdown / Segmented Switcher */}
-        <div
-          className="w-full flex items-center p-1 rounded-2xl mb-1 relative"
+        {/* Primary Action Button: Scan Bill */}
+        <motion.button
+          onClick={handleScanClick}
+          disabled={isScanning}
+          whileHover={{ scale: 1.025, boxShadow: "0 16px 36px rgba(195, 244, 0, 0.35)" }}
+          whileTap={{ scale: 0.98 }}
+          className="w-full py-4 px-6 rounded-2xl flex items-center justify-center gap-3 shadow-2xl transition-all duration-200 group relative overflow-hidden cursor-pointer"
           style={{
-            background: "rgba(18, 22, 10, 0.8)",
-            border: `1px solid ${BORDER_COLOR}`,
+            background: isScanning ? "#8e9379" : LIME,
+            color: "#111508",
+            border: "1px solid rgba(255, 255, 255, 0.25)",
+            boxShadow: "0 12px 30px rgba(195, 244, 0, 0.25), 0 2px 4px rgba(0,0,0,0.4)",
+            cursor: isScanning ? "wait" : "pointer",
           }}
         >
-          {(
-            [
-              { id: "scan", label: "Scan Bill", icon: "photo_camera", hasDraft: hasScanDraft },
-              { id: "list", label: "Shopping List", icon: "checklist", hasDraft: hasListDraft },
-              { id: "notepad", label: "Smart Notepad", icon: "edit_note", hasDraft: hasNotepadDraft },
-            ] as const
-          ).map((item) => {
-            const isActive = mode === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setMode(item.id)}
-                className="flex-1 py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs font-semibold relative"
-                style={{
-                  background: isActive ? "rgba(195, 244, 0, 0.15)" : "transparent",
-                  color: isActive ? LIME : "#8e9379",
-                  border: isActive ? "1px solid rgba(195, 244, 0, 0.28)" : "1px solid transparent",
-                }}
-              >
-                <span className="material-symbols-outlined text-sm leading-none">
-                  {item.icon}
-                </span>
-                <span className="truncate">{item.label}</span>
-                {item.hasDraft && (
-                  <span
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: LIME }}
-                    title="Active draft available"
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Primary Dynamic Action Button */}
-        {mode === "scan" && (
-          <button
-            onClick={handleScanClick}
-            disabled={isScanning}
-            className="w-full py-4 px-6 rounded-2xl flex items-center justify-center gap-3 shadow-2xl transition-all duration-200 active:scale-[0.98] group relative overflow-hidden"
+          <div
+            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
             style={{
-              background: isScanning ? "#8e9379" : LIME,
-              color: "#111508",
-              border: "1px solid rgba(255, 255, 255, 0.25)",
-              boxShadow: "0 12px 30px rgba(195, 244, 0, 0.25), 0 2px 4px rgba(0,0,0,0.4)",
-              cursor: isScanning ? "wait" : "pointer",
+              background: "linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.22) 50%, transparent 80%)",
+            }}
+          />
+          <span
+            className="material-symbols-outlined text-2xl font-bold"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
+            {isScanning ? "hourglass_top" : "photo_camera"}
+          </span>
+          <span
+            style={{
+              fontFamily: "'Syne', sans-serif",
+              fontSize: "17px",
+              fontWeight: 800,
+              letterSpacing: "-0.01em",
             }}
           >
-            <div
-              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-              style={{
-                background: "linear-gradient(105deg, transparent 20%, rgba(255,255,255,0.22) 50%, transparent 80%)",
-              }}
-            />
-            <span
-              className="material-symbols-outlined text-2xl font-bold"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              {isScanning ? "hourglass_top" : "photo_camera"}
-            </span>
-            <span
-              style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: "17px",
-                fontWeight: 800,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              {isScanning ? scanStep : "Scan Bill"}
-            </span>
-          </button>
-        )}
+            {isScanning ? scanStep : "Scan Bill"}
+          </span>
+        </motion.button>
 
-        {mode === "list" && (
-          <button
-            onClick={() => navigate("/scan?mode=list")}
-            className="w-full py-4 px-6 rounded-2xl flex items-center justify-center gap-3 shadow-2xl transition-all duration-200 active:scale-[0.98] group relative overflow-hidden"
-            style={{
-              background: LIME,
-              color: "#111508",
-              border: "1px solid rgba(255, 255, 255, 0.25)",
-              boxShadow: "0 12px 30px rgba(195, 244, 0, 0.25), 0 2px 4px rgba(0,0,0,0.4)",
-              cursor: "pointer",
-            }}
-          >
-            <span
-              className="material-symbols-outlined text-2xl font-bold"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              checklist
-            </span>
-            <span
-              style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: "17px",
-                fontWeight: 800,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Open Shopping List
-            </span>
-          </button>
-        )}
+        {/* Small option like it: Shopping List */}
+        <motion.button
+          type="button"
+          onClick={() => navigate("/shop")}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          className="flex items-center gap-2 py-2 px-4 rounded-xl text-xs font-mono font-semibold transition-all cursor-pointer"
+          style={{
+            color: "#c3f400",
+            background: "rgba(195, 244, 0, 0.08)",
+            border: "1px solid rgba(195, 244, 0, 0.25)",
+          }}
+        >
+          <span className="material-symbols-outlined text-sm">checklist</span>
+          <span>Or create a Shopping List →</span>
+        </motion.button>
 
-        {mode === "notepad" && (
-          <button
-            onClick={() => navigate("/scan?mode=notepad")}
-            className="w-full py-4 px-6 rounded-2xl flex items-center justify-center gap-3 shadow-2xl transition-all duration-200 active:scale-[0.98] group relative overflow-hidden"
-            style={{
-              background: LIME,
-              color: "#111508",
-              border: "1px solid rgba(255, 255, 255, 0.25)",
-              boxShadow: "0 12px 30px rgba(195, 244, 0, 0.25), 0 2px 4px rgba(0,0,0,0.4)",
-              cursor: "pointer",
-            }}
-          >
-            <span
-              className="material-symbols-outlined text-2xl font-bold"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              edit_note
-            </span>
-            <span
-              style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: "17px",
-                fontWeight: 800,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Open Smart Notepad
-            </span>
-          </button>
-        )}
-
-        {/* Draft Notice if active for current mode */}
-        {mode === "scan" && hasScanDraft && !isScanning && (
+        {/* Draft Notice if active */}
+        {hasScanDraft && !isScanning && (
           <motion.div
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
@@ -324,52 +232,27 @@ export default function HeroSection() {
           </motion.div>
         )}
 
-        {mode === "list" && hasListDraft && (
+        {hasListDraft && (
           <motion.div
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs"
             style={{
-              background: "rgba(195, 244, 0, 0.08)",
-              border: "1px solid rgba(195, 244, 0, 0.25)",
+              background: "rgba(0, 220, 229, 0.08)",
+              border: "1px solid rgba(0, 220, 229, 0.25)",
               color: "#e2e4cf",
             }}
           >
             <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: LIME }} />
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: CYAN }} />
               <span>Shopping list draft in progress</span>
             </div>
             <button
-              onClick={() => navigate("/scan?mode=list")}
+              onClick={() => navigate("/shop")}
               className="font-bold underline hover:opacity-80"
-              style={{ color: LIME, background: "none", border: "none", cursor: "pointer" }}
+              style={{ color: CYAN, background: "none", border: "none", cursor: "pointer" }}
             >
               Continue →
-            </button>
-          </motion.div>
-        )}
-
-        {mode === "notepad" && hasNotepadDraft && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl text-xs"
-            style={{
-              background: "rgba(195, 244, 0, 0.08)",
-              border: "1px solid rgba(195, 244, 0, 0.25)",
-              color: "#e2e4cf",
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: LIME }} />
-              <span>Notepad draft text saved</span>
-            </div>
-            <button
-              onClick={() => navigate("/scan?mode=notepad")}
-              className="font-bold underline hover:opacity-80"
-              style={{ color: LIME, background: "none", border: "none", cursor: "pointer" }}
-            >
-              Resume →
             </button>
           </motion.div>
         )}

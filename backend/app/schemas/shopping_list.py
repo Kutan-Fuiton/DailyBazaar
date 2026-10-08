@@ -73,15 +73,26 @@ class ShoppingListStatusUpdate(BaseModel):
     status: str   # DRAFT | SAVED | SHOPPING | COMPLETED | CANCELLED
 
 
+class CollaboratorResponse(BaseModel):
+    user_id:  int
+    username: str
+    tag:      Optional[str] = None
+    role:     str = "member"
+
+    model_config = {"from_attributes": True}
+
+
 class ShoppingListResponse(BaseModel):
-    id:           int
-    user_id:      int
-    title:        str
-    status:       str
-    created_at:   datetime
-    updated_at:   datetime
-    completed_at: Optional[datetime]
-    items:        List[ListItemResponse] = []
+    id:            int
+    user_id:       int
+    title:         str
+    status:        str
+    created_at:    datetime
+    updated_at:    datetime
+    completed_at:  Optional[datetime]
+    items:         List[ListItemResponse] = []
+    collaborators: List[CollaboratorResponse] = []
+    is_owner:      Optional[bool] = None
 
     model_config = {"from_attributes": True}
 

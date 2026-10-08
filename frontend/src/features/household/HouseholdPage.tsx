@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { householdApi } from "../../shared/api/household";
 import type {
   Household,
@@ -7,6 +8,7 @@ import type {
 } from "../../shared/types";
 import { formatCurrency } from "../../shared/utils";
 import Loader from "../../shared/components/Loader";
+import { CheckCircle2 } from "lucide-react";
 
 const LIME = "#c3f400";
 const CYAN = "#00dce5";
@@ -91,12 +93,12 @@ export default function HouseholdPage() {
       setInviteLoading(true);
       setInviteMsg("");
       await householdApi.inviteMember(selectedId, inviteIdentifier.trim());
-      setInviteMsg("✅ Member added successfully!");
+      setInviteMsg("Member added successfully!");
       setInviteIdentifier("");
       fetchDetails(selectedId);
       fetchHouseholds();
     } catch (err: any) {
-      setInviteMsg(`❌ ${err.message || "Could not find or invite user"}`);
+      setInviteMsg(err.message || "Could not find or invite user");
     } finally {
       setInviteLoading(false);
     }
@@ -141,9 +143,11 @@ export default function HouseholdPage() {
             </p>
           </div>
 
-          <button
+          <motion.button
             onClick={() => setShowCreateModal(true)}
-            className="px-5 py-3 rounded-2xl font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 self-start sm:self-auto transition-all"
+            whileHover={{ scale: 1.04, boxShadow: "0 6px 24px rgba(195,244,0,0.4)" }}
+            whileTap={{ scale: 0.96 }}
+            className="px-5 py-3 rounded-2xl font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-2 self-start sm:self-auto transition-all cursor-pointer"
             style={{
               background: LIME,
               color: "#111508",
@@ -152,7 +156,7 @@ export default function HouseholdPage() {
           >
             <span className="material-symbols-outlined text-base">group_add</span>
             New Household
-          </button>
+          </motion.button>
         </div>
 
         {loading ? (
@@ -202,10 +206,12 @@ export default function HouseholdPage() {
               {households.map((h) => {
                 const isActive = h.id === selectedId;
                 return (
-                  <button
+                  <motion.button
                     key={h.id}
                     onClick={() => setSelectedId(h.id)}
-                    className="w-full p-4 rounded-2xl text-left transition-all relative overflow-hidden"
+                    whileHover={{ scale: 1.02, x: 2 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full p-4 rounded-2xl text-left transition-all relative overflow-hidden cursor-pointer"
                     style={{
                       background: isActive ? "rgba(195,244,0,0.12)" : "rgba(24,28,14,0.85)",
                       border: isActive
@@ -224,7 +230,7 @@ export default function HouseholdPage() {
                         {h.members.length} {h.members.length === 1 ? "member" : "members"}
                       </span>
                     </div>
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>
@@ -385,8 +391,9 @@ export default function HouseholdPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-white/40 font-mono">
-                        🎉 All debts are settled! No pending transfers required.
+                      <p className="text-xs text-white/60 font-mono flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-[#c3f400] flex-shrink-0" />
+                        <span>All debts are settled! No pending transfers required.</span>
                       </p>
                     )}
                   </div>

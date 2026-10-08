@@ -1,10 +1,26 @@
-// ── Auth ──────────────────────────────────────────────────
 export interface User {
   id: number;
   username: string;
   email: string;
+  tag?: string;
   db_name: string | null;
   created_at: string;
+}
+
+export interface Friend {
+  id: number;
+  username: string;
+  email?: string;
+  tag: string;
+  since?: string;
+}
+
+export interface UserTagSearchResult {
+  id: number;
+  username: string;
+  tag: string;
+  is_self: boolean;
+  is_friend: boolean;
 }
 
 export interface TokenResponse {
@@ -225,6 +241,13 @@ export interface ListItemCreate {
   shop?: string | null;
 }
 
+export interface ShoppingListCollaborator {
+  user_id: number;
+  username: string;
+  tag?: string | null;
+  role: string;
+}
+
 export interface ShoppingList {
   id: number;
   user_id: number;
@@ -234,6 +257,8 @@ export interface ShoppingList {
   updated_at: string;
   completed_at: string | null;
   items: ListItem[];
+  collaborators?: ShoppingListCollaborator[];
+  is_owner?: boolean;
 }
 
 export interface ShoppingListCreate {
@@ -482,5 +507,36 @@ export interface UserBadgesResponse {
   earned_count: number;
   total_count: number;
   current_streak_days: number;
+}
+
+// ── Public Market Radar (Unauthenticated) ────────────────
+export interface PublicMarketCommodity {
+  id: number;
+  name: string;
+  category: string;
+  unit: string;
+  price: number;
+  price_range: string;
+  change_24h: number;
+  trend: "falling" | "rising" | "stable";
+  grade: string;
+  icon?: string;
+}
+
+export interface PublicMarketRadarResponse {
+  location_name: string;
+  location_area: string;
+  coordinates: { lat: number; lng: number } | null;
+  session: string;
+  verified_today: boolean;
+  updated_at: string;
+  total_items: number;
+  commodities: PublicMarketCommodity[];
+  guest_mode: boolean;
+  features: {
+    public_view_allowed: boolean;
+    custom_haul_logging_requires_auth: boolean;
+    live_sync_lists_requires_auth: boolean;
+  };
 }
 

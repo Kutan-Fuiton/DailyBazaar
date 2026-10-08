@@ -8,6 +8,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { suggestionsApi, type DualSuggestionItem } from "../../../shared/api/suggestions";
+import { History, Globe } from "lucide-react";
 
 interface DualScopeSuggestionsProps {
   query: string;
@@ -95,23 +96,25 @@ export default function DualScopeSuggestions({ query, onSelect, onClose }: DualS
         <button
           type="button"
           onClick={() => setActiveTab("personal")}
-          className={`flex-1 py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1 ${
+          className={`flex-1 py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
             activeTab === "personal" ? "bg-[#c3f400] text-[#111508]" : "text-[#8e9379] hover:text-[#e2e4cf]"
           }`}
           style={{ cursor: "pointer", border: "none" }}
         >
-          <span>👤 Your History</span>
+          <History className="w-3.5 h-3.5" />
+          <span>Your History</span>
           <span>({personalList.length})</span>
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("global")}
-          className={`flex-1 py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1 ${
+          className={`flex-1 py-1 px-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
             activeTab === "global" ? "bg-[#c3f400] text-[#111508]" : "text-[#8e9379] hover:text-[#e2e4cf]"
           }`}
           style={{ cursor: "pointer", border: "none" }}
         >
-          <span>🌍 Global DB</span>
+          <Globe className="w-3.5 h-3.5" />
+          <span>Market Staples</span>
           <span>({globalList.length})</span>
         </button>
       </div>
@@ -119,15 +122,16 @@ export default function DualScopeSuggestions({ query, onSelect, onClose }: DualS
       {loading && (
         <div className="py-3 text-center text-xs text-[#8e9379] flex items-center justify-center gap-2">
           <span className="w-3 h-3 rounded-full border-2 border-[#c3f400]/40 border-t-[#c3f400] animate-spin" />
-          <span>Searching global & personal databases…</span>
+          <span>Searching market staples & your purchase history…</span>
         </div>
       )}
 
       {/* ── 1. Personal History Section ── */}
       {(activeTab === "all" || activeTab === "personal") && personalList.length > 0 && (
         <div className="mb-2">
-          <div className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-[#8e9379] flex items-center gap-1">
-            <span>👤 Your Previous Purchases</span>
+          <div className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-[#8e9379] flex items-center gap-1.5">
+            <History className="w-3.5 h-3.5 text-[#c3f400]" />
+            <span>Your Previous Purchases</span>
           </div>
           <div className="flex flex-col gap-1">
             {personalList.map((item, idx) => (
@@ -169,8 +173,9 @@ export default function DualScopeSuggestions({ query, onSelect, onClose }: DualS
       {/* ── 2. Global Lexicon Section ── */}
       {(activeTab === "all" || activeTab === "global") && globalList.length > 0 && (
         <div>
-          <div className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-[#8e9379] flex items-center gap-1">
-            <span>🌍 Global Bazaar Catalog</span>
+          <div className="px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-[#8e9379] flex items-center gap-1.5">
+            <Globe className="w-3.5 h-3.5 text-[#00dce5]" />
+            <span>Global Bazaar Catalog</span>
           </div>
           <div className="flex flex-col gap-1">
             {globalList.map((item, idx) => (

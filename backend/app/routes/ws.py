@@ -97,3 +97,79 @@ async def household_websocket_endpoint(
     except Exception as exc:
         logger.warning(f"[WS] Exception in household {household_id}: {exc}")
         ws_manager.disconnect(websocket, household_id, user_id)
+
+
+@router.websocket("/ws/list/{list_id}")
+async def list_websocket_endpoint(
+    websocket: WebSocket,
+    list_id: int,
+    token: Optional[str] = Query(None),
+):
+    # 1. Authenticate JWT token
+    if not token or is_token_blocklisted(token):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Missing or revoked token")
+        return
+
+    payload = decode_token(token)
+    user_id_str = payload.get("sub") if payload else None
+    if not user_id_str:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid token")
+        return
+
+    user_id = int(user_id_str)
+
+    # 2. Verify user and list access (owner or collaborator)
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="User not found")
+            return
+
+        from ..models.shopping_list import ShoppingList, ShoppingListCollaborator
+        s_list = db.query(ShoppingList).filter(ShoppingList.id == list_id).first()
+        if not s_list:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Shopping list not found")
+            return
+
+        is_owner = (s_list.user_id == user_id)
+        is_collab = db.query(ShoppingListCollaborator).filter(
+            ShoppingListCollaborator.shopping_list_id == list_id,
+            ShoppingListCollaborator.user_id == user_id,
+        ).first() is not None
+
+        if not (is_owner or is_collab):
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Access denied to this shopping list")
+            return
+    finally:
+        db.close()
+
+    # 3. Connect to manager
+    await ws_manager.connect_list(websocket, list_id, user_id)
+
+    # 4. Broadcast join notification
+    await ws_manager.broadcast_to_list(
+        list_id=list_id,
+        event_type="USER_CONNECTED",
+        data={"user_id": user_id, "username": user.username},
+        sender_user_id=user_id,
+    )
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text('{"type": "pong"}')
+            elif data:
+                logger.debug(f"[WS] Received message on list {list_id} from user {user_id}: {data[:60]}")
+    except WebSocketDisconnect:
+        ws_manager.disconnect_list(websocket, list_id, user_id)
+        await ws_manager.broadcast_to_list(
+            list_id=list_id,
+            event_type="USER_DISCONNECTED",
+            data={"user_id": user_id},
+            sender_user_id=user_id,
+        )
+    except Exception as exc:
+        logger.warning(f"[WS] Exception in list {list_id}: {exc}")
+        ws_manager.disconnect_list(websocket, list_id, user_id)

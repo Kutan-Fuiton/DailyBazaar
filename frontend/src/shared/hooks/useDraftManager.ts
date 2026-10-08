@@ -73,8 +73,11 @@ export function useDraftManager() {
   const [mode, setModeState] = useState<QuickMode>(() => {
     try {
       const saved = localStorage.getItem(KEYS.MODE);
-      if (saved === "scan" || saved === "list" || saved === "notepad") {
+      if (saved === "scan" || saved === "list") {
         return saved;
+      }
+      if (saved === "notepad") {
+        return "list";
       }
     } catch {}
     return "scan";

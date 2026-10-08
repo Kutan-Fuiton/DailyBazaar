@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { scanApi } from "../../shared/api/scan";
 import { useDraftManager } from "../../shared/hooks/useDraftManager";
 import type { ParsedItem, ScanResponse } from "../../shared/types";
+import { Dices } from "lucide-react";
 
 const LIME = "#c3f400";
 const SURFACE_CARD = "rgba(26, 31, 15, 0.85)";
@@ -139,7 +140,7 @@ export default function ConfirmPage() {
       // Clear the scan draft once saved successfully
       clearScanDraft();
 
-      navigate("/history", { replace: true });
+      navigate("/profile?tab=history", { replace: true });
     } catch (err: any) {
       console.error("Save transaction error:", err);
       setErrorMsg(
@@ -287,7 +288,7 @@ export default function ConfirmPage() {
               fontWeight: 600,
             }}
           >
-            <span>🎲</span>
+            <Dices className="w-4 h-4 text-[#c3f400]" />
             <span className="hidden sm:inline">Random Dokan</span>
           </button>
         </div>

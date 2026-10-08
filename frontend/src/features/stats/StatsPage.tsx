@@ -15,6 +15,7 @@ import { statsApi, type StatsOverviewResponse } from "../../shared/api/stats";
 
 import SpendingBarChart from "./components/SpendingBarChart";
 import TopItemsRanking from "./components/TopItemsRanking";
+import BazaarTimingRadar from "./components/BazaarTimingRadar";
 import ItemSearchSection from "./components/ItemSearchSection";
 import ItemDetailModal from "./components/ItemDetailModal";
 import Loader from "../../shared/components/Loader";
@@ -201,6 +202,9 @@ export default function StatsPage() {
             loading={loading}
           />
         </div>
+
+        {/* Bazaar Timing Radar: Day of Week Price Inferences */}
+        <BazaarTimingRadar />
 
         {/* Item Search & Price Sparklines */}
         <ItemSearchSection onSelectItem={(id) => setSelectedItemId(id)} />

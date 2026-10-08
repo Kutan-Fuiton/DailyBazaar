@@ -6,8 +6,12 @@ Startup:
 - Registers all routers under /api/v1/
 - Configures CORS for frontend dev server
 """
-from fastapi import FastAPI
+import time
+import logging
+from datetime import datetime
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from contextlib import asynccontextmanager
 
 from .core.config import settings
@@ -22,29 +26,55 @@ from .routes import items
 from .routes import locations
 from .routes import shopping_lists
 from .routes import intelligence
-from .routes import households
 from .routes import gamification
-from .routes import suggestions
 from .routes import stats
 from .routes import ws
+from .routes import global_items
+from .core.global_item_db import init_global_item_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create all tables on startup if they don't exist
+    # Initialize main and global item database schemas
     init_db()
-    # Seed lexicon database with bazaar items if empty
+    init_global_item_db()
     from .core.database import SessionLocal
     from .core.seed_lexicon import seed_lexicon_if_empty
     db = SessionLocal()
     try:
         seed_lexicon_if_empty(db)
+        _backfill_missing_tags(db)
     except Exception as e:
-        import logging
-        logging.getLogger("vaniq.main").warning(f"Could not auto-seed lexicon: {e}")
+        logging.getLogger("vaniq.main").warning(f"Could not auto-seed: {e}")
     finally:
         db.close()
+
+    # Log credentials readiness for developer visibility
+    gid = settings.effective_google_client_id
+    if gid and gid.strip():
+        masked_gid = gid[:12] + "..." + gid[-18:] if len(gid) > 30 else gid
+        logging.getLogger("vaniq.auth").info(f"Google OAuth: Ready ({masked_gid})")
+    else:
+        logging.getLogger("vaniq.auth").warning("Google OAuth: Not configured (missing VITE_GOOGLE_CLIENT_ID in .env)")
     yield
+
+
+def _backfill_missing_tags(db):
+    """Backfills missing tags for any existing registered users."""
+    from .models.user import User
+    from .core.security import generate_user_tag
+
+    # Backfill missing tags for any existing users
+    no_tag_users = db.query(User).filter(User.tag.is_(None)).all()
+    for u in no_tag_users:
+        while True:
+            t = generate_user_tag()
+            if not db.query(User).filter(User.tag == t).first():
+                u.tag = t
+                break
+    if no_tag_users:
+        db.commit()
+
 
 
 from slowapi import _rate_limit_exceeded_handler
@@ -61,6 +91,18 @@ app = FastAPI(
 # Rate Limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Lightweight processing duration header
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = (time.perf_counter() - start_time) * 1000.0
+    response.headers["X-Process-Time-Ms"] = f"{duration_ms:.2f}"
+    return response
+
+# GZip compression for responses > 1KB (reduces payload transmission latency)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # CORS — allow frontend dev server
 app.add_middleware(
@@ -82,9 +124,8 @@ app.include_router(dashboard.router,       prefix=PREFIX)
 app.include_router(profile.router,         prefix=PREFIX)
 app.include_router(shopping_lists.router,  prefix=PREFIX)
 app.include_router(intelligence.router,    prefix=PREFIX)
-app.include_router(households.router,      prefix=PREFIX)
 app.include_router(gamification.router,    prefix=PREFIX)
-app.include_router(suggestions.router,     prefix=PREFIX)
+app.include_router(global_items.router,     prefix=PREFIX)
 app.include_router(stats.router,           prefix=PREFIX)
 app.include_router(ws.router,              prefix=PREFIX)
 

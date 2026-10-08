@@ -12,6 +12,7 @@ from ..core.security import (
     create_password_reset_token,
     verify_password_reset_token,
     decode_token,
+    generate_user_tag,
 )
 from ..core.deps import get_current_user, oauth2_scheme
 from ..core.limiter import limiter
@@ -43,9 +44,15 @@ def register(request: Request, body: RegisterRequest, db: Session = Depends(get_
     if db.query(User).filter(User.email.ilike(clean_email)).first():
         raise HTTPException(400, "Email already registered")
 
+    # Generate unique 8-character alphanumeric tag
+    tag = generate_user_tag()
+    while db.query(User).filter(User.tag == tag).first():
+        tag = generate_user_tag()
+
     user = User(
         username=clean_username,
         email=clean_email,
+        tag=tag,
         hashed_password=hash_password(body.password),
         db_name=None,
     )
@@ -174,16 +181,19 @@ def google_auth(body: GoogleAuthRequest, db: Session = Depends(get_main_db)):
             email = data.get("email")
             username_hint = data.get("name") or data.get("given_name")
     except Exception:
-        # Direct parsing fallback for development JWT tokens
+        # Direct parsing fallback for development / simulated JWT tokens
         try:
             import base64
             parts = token_str.split(".")
-            if len(parts) >= 2:
-                payload_b64 = parts[1] + "=="
+            payload_part = parts[1] if len(parts) >= 2 else parts[0]
+            payload_b64 = payload_part + "=" * (-len(payload_part) % 4)
+            try:
                 payload_bytes = base64.urlsafe_b64decode(payload_b64)
-                data = json.loads(payload_bytes.decode("utf-8"))
-                email = data.get("email")
-                username_hint = data.get("name") or data.get("given_name")
+            except Exception:
+                payload_bytes = base64.b64decode(payload_b64)
+            data = json.loads(payload_bytes.decode("utf-8"))
+            email = data.get("email")
+            username_hint = data.get("name") or data.get("given_name")
         except Exception:
             pass
 
@@ -195,6 +205,7 @@ def google_auth(body: GoogleAuthRequest, db: Session = Depends(get_main_db)):
 
     # 3. If user doesn't exist, create user record
     if not user:
+        from ..core.security import generate_user_tag
         base_username = (username_hint or email.split("@")[0]).replace(" ", "_").lower()
         unique_username = base_username
         counter = 1
@@ -202,10 +213,17 @@ def google_auth(body: GoogleAuthRequest, db: Session = Depends(get_main_db)):
             unique_username = f"{base_username}_{counter}"
             counter += 1
 
+        # Generate unique 8-char tag
+        while True:
+            t = generate_user_tag()
+            if not db.query(User).filter(User.tag == t).first():
+                break
+
         random_pass = secrets.token_urlsafe(16)
         user = User(
             username=unique_username,
             email=email,
+            tag=t,
             hashed_password=hash_password(random_pass),
             db_name=None,
         )
@@ -218,34 +236,6 @@ def google_auth(body: GoogleAuthRequest, db: Session = Depends(get_main_db)):
     refresh_token = create_refresh_token({"sub": str(user.id)})
     return {"access_token": access_token, "refresh_token": refresh_token}
 
-
-@router.post("/demo", response_model=TokenResponse)
-def demo_login(db: Session = Depends(get_main_db)):
-    """One-click demo access — creates the demo user if needed and returns a JWT.
-    The demo account (username: demo, email: demo@dailybazaar.app) is a shared
-    sandbox account pre-seeded with sample data. Perfect for quick product tours.
-    """
-    import secrets
-
-    DEMO_USERNAME = "demo"
-    DEMO_EMAIL    = "demo@dailybazaar.app"
-    DEMO_PASSWORD = "Demo@12345"   # kept static so the regular login also works
-
-    user = db.query(User).filter(User.username == DEMO_USERNAME).first()
-    if not user:
-        user = User(
-            username=DEMO_USERNAME,
-            email=DEMO_EMAIL,
-            hashed_password=hash_password(DEMO_PASSWORD),
-            db_name=None,
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-
-    access_token = create_access_token({"sub": str(user.id)})
-    refresh_token = create_refresh_token({"sub": str(user.id)})
-    return {"access_token": access_token, "refresh_token": refresh_token}
 
 
 @router.get("/me", response_model=UserResponse)

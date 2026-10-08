@@ -20,6 +20,8 @@ class ConnectionManager:
     def __init__(self):
         # Maps household_id -> set of active WebSockets
         self.active_households: Dict[int, Set[WebSocket]] = {}
+        # Maps list_id -> set of active WebSockets (collaborative shopping lists)
+        self.active_lists: Dict[int, Set[WebSocket]] = {}
         # Maps user_id -> set of active WebSockets (for user-specific notifications)
         self.active_users: Dict[int, Set[WebSocket]] = {}
         self._pubsub_task: Optional[asyncio.Task] = None
@@ -48,6 +50,73 @@ class ConnectionManager:
                 del self.active_users[user_id]
 
         logger.info(f"[WS] Disconnected: user_id={user_id} from household_id={household_id}")
+
+    # ── Shopping List Collaborator Real-Time Sockets ──────────────────────────
+
+    async def connect_list(self, websocket: WebSocket, list_id: int, user_id: int):
+        await websocket.accept()
+        if list_id not in self.active_lists:
+            self.active_lists[list_id] = set()
+        self.active_lists[list_id].add(websocket)
+
+        if user_id not in self.active_users:
+            self.active_users[user_id] = set()
+        self.active_users[user_id].add(websocket)
+
+        logger.info(f"[WS] Connected: user_id={user_id} in list_id={list_id} (active: {len(self.active_lists[list_id])})")
+
+    def disconnect_list(self, websocket: WebSocket, list_id: int, user_id: int):
+        if list_id in self.active_lists:
+            self.active_lists[list_id].discard(websocket)
+            if not self.active_lists[list_id]:
+                del self.active_lists[list_id]
+
+        if user_id in self.active_users:
+            self.active_users[user_id].discard(websocket)
+            if not self.active_users[user_id]:
+                del self.active_users[user_id]
+
+        logger.info(f"[WS] Disconnected: user_id={user_id} from list_id={list_id}")
+
+    async def broadcast_to_list(
+        self,
+        list_id: int,
+        event_type: str,
+        data: dict,
+        sender_user_id: Optional[int] = None,
+    ):
+        """Broadcasts an event message to all connected collaborators of a shopping list."""
+        payload = {
+            "type": event_type,
+            "list_id": list_id,
+            "sender_user_id": sender_user_id,
+            "data": data,
+        }
+        raw_msg = json.dumps(payload, default=str)
+
+        # 1. Publish to Redis channel for multi-worker relay if Redis is online
+        r = get_redis()
+        if r and is_redis_online():
+            try:
+                r.publish(f"list:{list_id}", raw_msg)
+            except Exception as e:
+                logger.warning(f"[WS] Redis publish to list:{list_id} failed: {e}")
+
+        # 2. Local delivery to active WebSockets in this process
+        sockets = list(self.active_lists.get(list_id, []))
+        if not sockets:
+            return
+
+        dead_sockets = []
+        for ws in sockets:
+            try:
+                await ws.send_text(raw_msg)
+            except Exception:
+                dead_sockets.append(ws)
+
+        if dead_sockets and list_id in self.active_lists:
+            for ws in dead_sockets:
+                self.active_lists[list_id].discard(ws)
 
     async def broadcast_to_household(
         self,

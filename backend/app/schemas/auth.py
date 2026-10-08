@@ -74,6 +74,7 @@ class UserResponse(BaseModel):
     id: int
     username: str
     email: str
+    tag: Optional[str] = None
     db_name: Optional[str] = None
     created_at: datetime
 

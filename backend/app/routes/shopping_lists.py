@@ -18,12 +18,19 @@ from datetime import date, datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from ..core.deps import get_current_user, get_user_db
 from ..models.item import Item, ItemPriceHistory
 from ..models.location import MarketPriceHistory
-from ..models.shopping_list import ListItem, ListItemSourceEnum, ListStatusEnum, ShoppingList
+from ..models.shopping_list import (
+    ListItem,
+    ListItemSourceEnum,
+    ListStatusEnum,
+    ShoppingList,
+    ShoppingListCollaborator,
+)
 from ..models.transaction import Transaction, TransactionItem
 from ..models.user import User
 from ..schemas.shopping_list import (
@@ -37,6 +44,7 @@ from ..schemas.shopping_list import (
     ShoppingListCreate,
     ShoppingListResponse,
     ShoppingListStatusUpdate,
+    CollaboratorResponse,
 )
 from ..services.matching_service import match_item_name
 from ..services.parsing_service import parse_natural_list
@@ -56,22 +64,19 @@ _ALLOWED_TRANSITIONS: dict[str, list[str]] = {
 }
 
 
-def _broadcast_list_event(user: User, event_type: str, data: dict):
-    """Safely dispatches real-time WebSocket events to all household members."""
-    household_id = getattr(user, "household_id", None)
-    if not household_id:
-        return
+def _broadcast_list_event(list_id: int, event_type: str, data: dict, sender_user_id: int):
+    """Safely dispatches real-time WebSocket events to all collaborators viewing this list."""
     import asyncio
     from ..core.ws_manager import ws_manager
     try:
         loop = asyncio.get_event_loop()
         if loop.is_running():
             asyncio.create_task(
-                ws_manager.broadcast_to_household(
-                    household_id=household_id,
+                ws_manager.broadcast_to_list(
+                    list_id=list_id,
                     event_type=event_type,
                     data=data,
-                    sender_user_id=user.id,
+                    sender_user_id=sender_user_id,
                 )
             )
     except Exception:
@@ -157,7 +162,7 @@ def create_shopping_list(
 
     db.commit()
     db.refresh(shopping_list)
-    return shopping_list
+    return _serialize_list(shopping_list, current_user.id)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -171,13 +176,22 @@ def list_shopping_lists(
     db: Session = Depends(get_user_db),
 ):
     """
-    Return all shopping lists for the authenticated user.
+    Return all shopping lists owned by the user or shared with the user as collaborator.
     Optionally filter by status (e.g. ?status=SHOPPING to get active lists).
     """
-    q = db.query(ShoppingList).filter(ShoppingList.user_id == current_user.id)
+    collab_subquery = db.query(ShoppingListCollaborator.shopping_list_id).filter(
+        ShoppingListCollaborator.user_id == current_user.id
+    )
+    q = db.query(ShoppingList).filter(
+        or_(
+            ShoppingList.user_id == current_user.id,
+            ShoppingList.id.in_(collab_subquery),
+        )
+    )
     if status:
         q = q.filter(ShoppingList.status == status.upper())
-    return q.order_by(ShoppingList.created_at.desc()).all()
+    lists = q.order_by(ShoppingList.created_at.desc()).all()
+    return [_serialize_list(sl, current_user.id) for sl in lists]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -191,7 +205,7 @@ def get_shopping_list(
     db: Session = Depends(get_user_db),
 ):
     shopping_list = _get_list_or_404(list_id, current_user.id, db)
-    return shopping_list
+    return _serialize_list(shopping_list, current_user.id)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -269,7 +283,7 @@ def add_item_to_list(
     db.commit()
     db.refresh(list_item)
     _broadcast_list_event(
-        current_user,
+        list_id,
         "ITEM_ADDED",
         {
             "list_id": list_id,
@@ -278,6 +292,7 @@ def add_item_to_list(
             "quantity": list_item.quantity,
             "unit": list_item.unit,
         },
+        current_user.id,
     )
     return list_item
 
@@ -305,9 +320,10 @@ def mark_item_bought(
     db.commit()
     db.refresh(list_item)
     _broadcast_list_event(
-        current_user,
+        list_id,
         "ITEM_TOGGLED",
         {"list_id": list_id, "item_id": item_id, "is_bought": body.is_bought},
+        current_user.id,
     )
     return list_item
 
@@ -332,9 +348,10 @@ def delete_list_item(
     db.delete(list_item)
     db.commit()
     _broadcast_list_event(
-        current_user,
+        list_id,
         "ITEM_DELETED",
         {"list_id": list_id, "item_id": item_id},
+        current_user.id,
     )
 
 
@@ -359,8 +376,8 @@ def mark_all_items_bought(
 
     db.commit()
     db.refresh(shopping_list)
-    _broadcast_list_event(current_user, "ALL_BOUGHT", {"list_id": list_id})
-    return shopping_list
+    _broadcast_list_event(list_id, "ALL_BOUGHT", {"list_id": list_id}, current_user.id)
+    return _serialize_list(shopping_list, current_user.id)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -550,18 +567,152 @@ def finalize_shopping_list(
     }
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Collaborators / Householders on List
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/{list_id}/collaborators", response_model=List[CollaboratorResponse])
+def get_list_collaborators(
+    list_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_user_db),
+):
+    shopping_list = _get_list_or_404(list_id, current_user.id, db)
+    return [
+        {
+            "user_id": c.user_id,
+            "username": c.user.username if c.user else "",
+            "tag": c.user.tag if c.user else None,
+            "role": c.role,
+        }
+        for c in shopping_list.collaborators
+    ]
+
+
+@router.post("/{list_id}/collaborators")
+def add_list_collaborator(
+    list_id: int,
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_user_db),
+):
+    """Adds a friend/householder to collaborate on this list in real-time."""
+    shopping_list = _get_list_or_404(list_id, current_user.id, db)
+    if shopping_list.user_id != current_user.id:
+        raise HTTPException(403, "Only the list owner can add householders")
+
+    target_user: User | None = None
+    if "tag" in body and body["tag"]:
+        clean_tag = str(body["tag"]).strip().upper().lstrip("#")
+        target_user = db.query(User).filter(User.tag == clean_tag).first()
+    elif "friend_id" in body and body["friend_id"]:
+        target_user = db.query(User).filter(User.id == int(body["friend_id"])).first()
+    elif "user_id" in body and body["user_id"]:
+        target_user = db.query(User).filter(User.id == int(body["user_id"])).first()
+
+    if not target_user:
+        raise HTTPException(404, "User not found with provided tag or ID")
+
+    if target_user.id == current_user.id:
+        raise HTTPException(400, "You are already the owner of this list")
+
+    # Check if already added
+    existing = db.query(ShoppingListCollaborator).filter(
+        ShoppingListCollaborator.shopping_list_id == list_id,
+        ShoppingListCollaborator.user_id == target_user.id,
+    ).first()
+    if existing:
+        return {"message": f"{target_user.username} is already collaborating on this list"}
+
+    collab = ShoppingListCollaborator(
+        shopping_list_id=list_id,
+        user_id=target_user.id,
+        role=body.get("role", "member"),
+    )
+    db.add(collab)
+    db.commit()
+
+    _broadcast_list_event(
+        list_id,
+        "COLLABORATOR_ADDED",
+        {"user_id": target_user.id, "username": target_user.username, "tag": target_user.tag},
+        current_user.id,
+    )
+
+    return {
+        "message": f"Added {target_user.username} as householder to this list!",
+        "collaborator": {
+            "user_id": target_user.id,
+            "username": target_user.username,
+            "tag": target_user.tag,
+            "role": collab.role,
+        },
+    }
+
+
+@router.delete("/{list_id}/collaborators/{collaborator_user_id}")
+def remove_list_collaborator(
+    list_id: int,
+    collaborator_user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_user_db),
+):
+    """Removes a householder collaborator from this shopping list."""
+    shopping_list = _get_list_or_404(list_id, current_user.id, db)
+    if shopping_list.user_id != current_user.id and current_user.id != collaborator_user_id:
+        raise HTTPException(403, "You do not have permission to remove this collaborator")
+
+    db.query(ShoppingListCollaborator).filter(
+        ShoppingListCollaborator.shopping_list_id == list_id,
+        ShoppingListCollaborator.user_id == collaborator_user_id,
+    ).delete(synchronize_session=False)
+    db.commit()
+
+    _broadcast_list_event(
+        list_id,
+        "COLLABORATOR_REMOVED",
+        {"user_id": collaborator_user_id},
+        current_user.id,
+    )
+    return {"message": "Collaborator removed from list"}
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Private helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+
+def _serialize_list(sl: ShoppingList, current_user_id: int) -> dict:
+    return {
+        "id": sl.id,
+        "user_id": sl.user_id,
+        "title": sl.title,
+        "status": sl.status.value if hasattr(sl.status, "value") else str(sl.status),
+        "created_at": sl.created_at,
+        "updated_at": sl.updated_at,
+        "completed_at": sl.completed_at,
+        "items": sl.items,
+        "collaborators": [
+            {
+                "user_id": c.user_id,
+                "username": c.user.username if c.user else "",
+                "tag": c.user.tag if c.user else None,
+                "role": c.role,
+            }
+            for c in sl.collaborators
+        ],
+        "is_owner": sl.user_id == current_user_id,
+    }
+
+
 def _get_list_or_404(list_id: int, user_id: int, db: Session) -> ShoppingList:
-    shopping_list = db.query(ShoppingList).filter(
-        ShoppingList.id == list_id,
-        ShoppingList.user_id == user_id,
-    ).first()
+    shopping_list = db.query(ShoppingList).filter(ShoppingList.id == list_id).first()
     if not shopping_list:
         raise HTTPException(404, "Shopping list not found")
+    is_owner = (shopping_list.user_id == user_id)
+    is_collab = any(c.user_id == user_id for c in shopping_list.collaborators)
+    if not (is_owner or is_collab):
+        raise HTTPException(403, "You do not have access to this shopping list")
     return shopping_list
 
 
@@ -587,3 +738,4 @@ def _assert_list_is_editable(shopping_list: ShoppingList) -> None:
             status_code=400,
             detail=f"Cannot modify a {current_status} shopping list.",
         )
+

@@ -16,7 +16,6 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../../shared/context/AuthContext";
 import { dashboardApi } from "../../shared/api/dashboard";
-import { transactionsApi } from "../../shared/api/transactions";
 import type { DashboardSummary, TopItem, Transaction } from "../../shared/types";
 
 import HeroSection from "./components/HeroSection";
@@ -51,20 +50,35 @@ function timeAgo(iso: string | null) {
 
 function greeting() {
   const h = new Date().getHours();
+  if (h < 5)  return "Good night";
   if (h < 12) return "Good morning";
   if (h < 17) return "Good afternoon";
-  return "Good evening";
+  if (h < 21) return "Good evening";
+  return "Good night";
+}
+
+function greetingEmoji() {
+  const h = new Date().getHours();
+  if (h < 5)  return "🌙";
+  if (h < 12) return "☀️";
+  if (h < 17) return "🌤️";
+  if (h < 21) return "🌆";
+  return "🌙";
 }
 
 export default function HomePage() {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const firstName = user?.username?.split("_")[0] ?? "Shopper";
+  const capitalFirst = firstName.charAt(0).toUpperCase() + firstName.slice(1);
 
-  /* ── State: pre-fill from persistent localStorage cache for instant (0ms) render ── */
+  /* ── State: strictly user-scoped cache to guarantee no data leaks between accounts ── */
+  const userCacheKey = user?.id ? `vaniq_home_cache_u${user.id}` : null;
+
   const fromCache = <T,>(key: string, fallback: T): T => {
+    if (!userCacheKey) return fallback;
     try {
-      const c = localStorage.getItem("vaniq_home_cache_v2") || sessionStorage.getItem("vaniq_home_cache");
+      const c = localStorage.getItem(userCacheKey);
       return c ? (JSON.parse(c)[key] ?? fallback) : fallback;
     } catch {
       return fallback;
@@ -74,72 +88,83 @@ export default function HomePage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(() => fromCache("summary", null));
   const [topItems, setTopItems] = useState<TopItem[]>(() => fromCache("top_items", []));
   const [recentHauls, setRecentHauls] = useState<Transaction[]>(() => fromCache("recent_hauls", []));
-  const [loading, setLoading] = useState<boolean>(() => {
-    try {
-      return !(localStorage.getItem("vaniq_home_cache_v2") || sessionStorage.getItem("vaniq_home_cache"));
-    } catch {
-      return true;
-    }
-  });
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    // Purge legacy un-scoped cache keys that caused cross-user data bleeding
+    try {
+      localStorage.removeItem("vaniq_home_cache_v2");
+      sessionStorage.removeItem("vaniq_home_cache");
+    } catch {}
+
+    if (!isAuthenticated || !user?.id) {
+      setSummary(null);
+      setTopItems([]);
+      setRecentHauls([]);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
+    const currentUserId = user.id;
+    const key = `vaniq_home_cache_u${currentUserId}`;
+
+    // Load from this user's specific cache if available
+    try {
+      const cached = localStorage.getItem(key);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.summary !== undefined) setSummary(parsed.summary);
+        if (parsed.top_items !== undefined) setTopItems(parsed.top_items);
+        if (parsed.recent_hauls !== undefined) setRecentHauls(parsed.recent_hauls);
+      } else {
+        setSummary(null);
+        setTopItems([]);
+        setRecentHauls([]);
+      }
+    } catch {
+      setSummary(null);
+      setTopItems([]);
+      setRecentHauls([]);
+    }
+
+    setLoading(true);
+
     async function load() {
       try {
         const res = await dashboardApi.overview();
         if (cancelled) return;
         if (res.success && res.data) {
           const d = res.data;
-          let items = d.top_items ?? [];
-          let hauls = d.recent_hauls ?? [];
+          const items = d.top_items ?? [];
+          const hauls = d.recent_hauls ?? [];
 
-          // If overview did not include top_items or hauls, fetch in parallel
-          if (items.length === 0 || hauls.length === 0) {
-            const [topRes, txRes] = await Promise.allSettled([
-              items.length === 0 ? dashboardApi.topItems() : Promise.resolve(null),
-              hauls.length === 0 ? transactionsApi.list({ limit: 5 }) : Promise.resolve(null),
-            ]);
-            if (topRes.status === "fulfilled" && topRes.value?.data) {
-              items = topRes.value.data;
-            }
-            if (txRes.status === "fulfilled" && txRes.value) {
-              hauls = txRes.value;
-            }
-          }
-
-          if (cancelled) return;
-          if (d.summary) setSummary(d.summary);
+          setSummary(d.summary ?? null);
           setTopItems(items);
           setRecentHauls(hauls);
 
           try {
-            const cachedPayload = { ...d, top_items: items, recent_hauls: hauls };
-            localStorage.setItem("vaniq_home_cache_v2", JSON.stringify(cachedPayload));
-            sessionStorage.setItem("vaniq_home_cache", JSON.stringify(cachedPayload));
+            const cachedPayload = { summary: d.summary, top_items: items, recent_hauls: hauls };
+            localStorage.setItem(key, JSON.stringify(cachedPayload));
           } catch {}
           return;
         }
       } catch {
-        try {
-          const [sumRes, topRes, txRes] = await Promise.allSettled([
-            dashboardApi.summary(),
-            dashboardApi.topItems(),
-            transactionsApi.list({ limit: 5 }),
-          ]);
-          if (cancelled) return;
-          if (sumRes.status === "fulfilled") setSummary(sumRes.value.data);
-          if (topRes.status === "fulfilled") setTopItems(topRes.value.data ?? []);
-          if (txRes.status === "fulfilled") setRecentHauls(txRes.value ?? []);
-        } catch {}
+        if (cancelled) return;
+        // On error or unauthorized, ensure clear state
+        setSummary(null);
+        setTopItems([]);
+        setRecentHauls([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
+
     load();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user?.id, isAuthenticated]);
 
   return (
     <div className="relative min-h-screen" style={{ backgroundColor: "#111508" }}>
@@ -161,16 +186,16 @@ export default function HomePage() {
       <div className="page-container pt-16 pb-24 relative z-10">
         {/* User Greeting (if logged in) */}
         {isAuthenticated && (
-          <motion.div className="mb-2" {...fadeUp} transition={{ duration: 0.4 }}>
+          <motion.div className="mb-4" {...fadeUp} transition={{ duration: 0.4 }}>
             <p
               style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: "12px",
-                fontWeight: 500,
-                letterSpacing: "0.08em",
+                fontFamily: "'Space Mono', monospace",
+                fontSize: "11px",
+                fontWeight: 700,
+                letterSpacing: "0.12em",
                 color: "#8e9379",
                 textTransform: "uppercase",
-                marginBottom: "2px",
+                marginBottom: "4px",
               }}
             >
               {greeting()}
@@ -178,14 +203,69 @@ export default function HomePage() {
             <p
               style={{
                 fontFamily: "'Syne', sans-serif",
-                fontSize: "20px",
-                fontWeight: 700,
+                fontSize: "24px",
+                fontWeight: 800,
                 color: "#e2e4cf",
+                letterSpacing: "-0.02em",
               }}
             >
-              {firstName.charAt(0).toUpperCase() + firstName.slice(1)}
-              <span style={{ color: LIME }}>.</span>
+              {capitalFirst}<span style={{ color: LIME }}>.</span>
             </p>
+          </motion.div>
+        )}
+
+        {/* Onboarding panel for brand-new users */}
+        {isAuthenticated && !loading && (summary === null || (summary.total_transactions ?? 0) === 0) && (
+          <motion.div
+            className="mb-6 rounded-2xl p-5"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            style={{
+              background: "rgba(195,244,0,0.06)",
+              border: "1px solid rgba(195,244,0,0.18)",
+            }}
+          >
+            <div className="flex items-start gap-4">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(195,244,0,0.12)", fontSize: "22px" }}
+              >
+                {greetingEmoji()}
+              </div>
+              <div className="flex-1">
+                <p style={{ fontFamily: "'Syne', sans-serif", fontSize: "15px", fontWeight: 700, color: "#e2e4cf", marginBottom: "4px" }}>
+                  Welcome to VANIQ, {capitalFirst}!
+                </p>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#8e9379", lineHeight: 1.6 }}>
+                  Your smart bazaar finance tracker is set up. Start by scanning a bill or adding items to a shopping list.
+                </p>
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {[
+                    { label: "Scan a Bill",       icon: "document_scanner", path: "/scan" },
+                    { label: "Create a List",     icon: "checklist",        path: "/shop" },
+                    { label: "Browse Items",      icon: "inventory_2",      path: "/items" },
+                  ].map((action) => (
+                    <motion.button
+                      key={action.label}
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => navigate(action.path)}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold"
+                      style={{
+                        fontFamily: "'Space Mono', monospace",
+                        background: "rgba(195,244,0,0.10)",
+                        border: "1px solid rgba(195,244,0,0.22)",
+                        color: LIME,
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-base" style={{ fontSize: "14px" }}>{action.icon}</span>
+                      {action.label}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </motion.div>
         )}
 
@@ -213,7 +293,7 @@ export default function HomePage() {
                 Recent Purchases
               </h2>
               <button
-                onClick={() => navigate("/history")}
+                onClick={() => navigate("/profile?tab=history")}
                 style={{
                   fontFamily: "'Inter', sans-serif",
                   fontSize: "12px",
@@ -258,7 +338,7 @@ export default function HomePage() {
                       }}
                       whileHover={{ x: 2 }}
                       transition={{ duration: 0.15 }}
-                      onClick={() => !loading && navigate("/history")}
+                      onClick={() => !loading && navigate("/profile?tab=history")}
                     >
                       {loading ? (
                         <>

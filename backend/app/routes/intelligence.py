@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from ..core.deps import get_current_user, get_user_db
+from ..core.database import get_main_db
 from ..models.user import User
 from ..schemas.intelligence import (
     MarketComparisonResponse,
@@ -101,3 +102,24 @@ def toggle_share_pricing(
         "share_pricing_data": val,
         "message": "Market data sharing enabled." if val else "Market data sharing disabled."
     }
+
+
+@router.get("/public-market")
+def get_public_market(
+    lat: Optional[float] = Query(None, description="User latitude"),
+    lng: Optional[float] = Query(None, description="User longitude"),
+    market_name: Optional[str] = Query(None, description="Specific market or city name"),
+    db: Session = Depends(get_main_db),
+):
+    """
+    Public, unauthenticated market radar:
+    Returns live wet market rates for nearby bazaars.
+    Zero login or authentication required.
+    """
+    return intelligence_service.get_public_market_radar(
+        lat=lat,
+        lng=lng,
+        market_name=market_name,
+        db=db
+    )
+

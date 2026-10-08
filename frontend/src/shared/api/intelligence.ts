@@ -27,4 +27,13 @@ export const intelligenceApi = {
       method: "PATCH",
       body: JSON.stringify({ share }),
     }),
+
+  getPublicMarketRadar: (lat?: number, lng?: number, marketName?: string) => {
+    const params = new URLSearchParams();
+    if (lat !== undefined && lat !== null) params.append("lat", String(lat));
+    if (lng !== undefined && lng !== null) params.append("lng", String(lng));
+    if (marketName) params.append("market_name", marketName);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return client<import("../types").PublicMarketRadarResponse>(`/intelligence/public-market${qs}`);
+  },
 };

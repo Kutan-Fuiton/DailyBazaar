@@ -17,8 +17,6 @@ interface AuthState {
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, email: string, password: string) => Promise<void>;
   loginWithGoogle: (credential: string) => Promise<void>;
-  /** One-click demo login — no credentials required. */
-  loginDemo: () => Promise<void>;
   logout: () => void;
 }
 
@@ -63,7 +61,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
+  const clearAllHomeCaches = (userId?: number) => {
+    try {
+      localStorage.removeItem("vaniq_home_cache_v2");
+      sessionStorage.removeItem("vaniq_home_cache");
+      if (userId) {
+        localStorage.removeItem(`vaniq_home_cache_u${userId}`);
+      }
+    } catch {}
+  };
+
   const login = useCallback(async (username: string, password: string) => {
+    clearAllHomeCaches();
     const { access_token, refresh_token } = await authApi.login(username, password);
     authToken.set(access_token);
     if (refresh_token) authToken.setRefresh(refresh_token);
@@ -73,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (username: string, email: string, password: string) => {
+    clearAllHomeCaches();
     await authApi.register(username, email, password);
     // Auto-login after register
     const { access_token, refresh_token } = await authApi.login(username, password);
@@ -84,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loginWithGoogle = useCallback(async (credential: string) => {
+    clearAllHomeCaches();
     const { access_token, refresh_token } = await authApi.googleLogin(credential);
     authToken.set(access_token);
     if (refresh_token) authToken.setRefresh(refresh_token);
@@ -92,20 +103,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try { localStorage.setItem("spendly_user", JSON.stringify(me)); } catch {}
   }, []);
 
-  const loginDemo = useCallback(async () => {
-    const { access_token, refresh_token } = await authApi.demoLogin();
-    authToken.set(access_token);
-    if (refresh_token) authToken.setRefresh(refresh_token);
-    const me = await authApi.me();
-    setUser(me);
-    try { localStorage.setItem("spendly_user", JSON.stringify(me)); } catch {}
-  }, []);
-
   const logout = useCallback(() => {
+    clearAllHomeCaches(user?.id);
     authToken.clear();
     try { localStorage.removeItem("spendly_user"); } catch {}
     setUser(null);
-  }, []);
+  }, [user?.id]);
 
   return (
     <AuthContext.Provider
@@ -116,7 +119,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         register,
         loginWithGoogle,
-        loginDemo,
         logout,
       }}
     >

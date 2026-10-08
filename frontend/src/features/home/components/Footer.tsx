@@ -72,7 +72,7 @@ export default function Footer() {
             Shopping Lists
           </button>
           <button
-            onClick={() => navigate("/history")}
+            onClick={() => navigate("/profile?tab=history")}
             className="hover:text-[#c3f400] transition-colors"
             style={{ background: "none", border: "none", cursor: "pointer", color: "inherit" }}
           >

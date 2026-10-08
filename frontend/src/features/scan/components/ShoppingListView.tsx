@@ -6,10 +6,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { shoppingListsApi } from "../../../shared/api/shoppingLists";
+import { friendsApi } from "../../../shared/api/friends";
+import { useHouseholdSocket, type HouseholdWSEvent } from "../../../shared/hooks/useHouseholdSocket";
 import type {
   ShoppingList,
   ParsedListItem,
+  ShoppingListCollaborator,
+  Friend,
 } from "../../../shared/types";
+import { Coins, Zap, FileText, AlertCircle, Users, UserPlus, Trash2 } from "lucide-react";
 
 const LIME = "#c3f400";
 const CYAN = "#00dce5";
@@ -284,6 +289,30 @@ export default function ShoppingListView({
                     >
                       {timeAgo(list.created_at)}
                     </span>
+                    {list.collaborators && list.collaborators.length > 0 && (
+                      <span
+                        className="px-1.5 py-0.5 rounded font-mono font-bold flex items-center gap-1 text-[9px]"
+                        style={{
+                          background: "rgba(195,244,0,0.12)",
+                          color: LIME,
+                        }}
+                      >
+                        <Users className="w-2.5 h-2.5" />
+                        <span>{list.collaborators.length}</span>
+                      </span>
+                    )}
+                    {list.is_owner === false && (
+                      <span
+                        className="px-1.5 py-0.5 rounded uppercase font-bold text-[9px]"
+                        style={{
+                          fontFamily: "'Space Mono', monospace",
+                          background: "rgba(0,220,229,0.15)",
+                          color: CYAN,
+                        }}
+                      >
+                        SHARED
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -410,6 +439,55 @@ function ChecklistDrawer({
   const [finalizing, setFinalizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ── Collaborators & Householders State ──
+  const [collaborators, setCollaborators] = useState<ShoppingListCollaborator[]>(list.collaborators || []);
+  const [showHouseholdersModal, setShowHouseholdersModal] = useState(false);
+
+  const loadCollaborators = useCallback(async () => {
+    try {
+      const collabs = await shoppingListsApi.getCollaborators(list.id);
+      setCollaborators(collabs);
+    } catch (err) {
+      console.error("Failed to load collaborators:", err);
+    }
+  }, [list.id]);
+
+  useEffect(() => {
+    loadCollaborators();
+  }, [loadCollaborators]);
+
+  // ── Real-time WebSocket synchronization ──
+  const handleSocketEvent = useCallback((event: HouseholdWSEvent) => {
+    if (event.type === "ITEM_ADDED" && event.data) {
+      onListUpdated({
+        ...list,
+        items: list.items.some((i) => i.id === event.data.id) ? list.items : [...list.items, event.data as any],
+      });
+    } else if (event.type === "ITEM_TOGGLED" && event.data) {
+      onListUpdated({
+        ...list,
+        items: list.items.map((i) => (i.id === event.data.id ? (event.data as any) : i)),
+      });
+    } else if (event.type === "ITEM_DELETED" && event.data?.item_id) {
+      onListUpdated({
+        ...list,
+        items: list.items.filter((i) => i.id !== event.data.item_id),
+      });
+    } else if (event.type === "ALL_BOUGHT") {
+      onListUpdated({
+        ...list,
+        items: list.items.map((i) => ({ ...i, is_bought: true })),
+      });
+    } else if (event.type === "COLLABORATOR_ADDED" || event.type === "COLLABORATOR_REMOVED") {
+      loadCollaborators();
+    }
+  }, [list, onListUpdated, loadCollaborators]);
+
+  const { isConnected } = useHouseholdSocket({
+    listId: list.id,
+    onEvent: handleSocketEvent,
+  });
+
   const boughtCount = list.items.filter((i) => i.is_bought).length;
   const totalCount = list.items.length;
 
@@ -530,15 +608,28 @@ function ChecklistDrawer({
           {/* Header */}
           <div className="flex justify-between items-start pb-4 border-b border-white/10">
             <div>
-              <p
-                className="text-[10px] uppercase tracking-widest"
-                style={{
-                  fontFamily: "'Space Mono', monospace",
-                  color: CYAN,
-                }}
-              >
-                Bazaar Check-off Mode
-              </p>
+              <div className="flex items-center gap-2">
+                <p
+                  className="text-[10px] uppercase tracking-widest"
+                  style={{
+                    fontFamily: "'Space Mono', monospace",
+                    color: CYAN,
+                  }}
+                >
+                  Bazaar Check-off Mode
+                </p>
+                <div
+                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-mono"
+                  style={{ color: isConnected ? LIME : "#8e9379" }}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isConnected ? "bg-lime-400 animate-pulse" : "bg-neutral-500"
+                    }`}
+                  />
+                  <span>{isConnected ? "LIVE SYNC" : "CONNECTING"}</span>
+                </div>
+              </div>
               <h2
                 className="text-2xl font-black uppercase mt-0.5"
                 style={{
@@ -549,14 +640,29 @@ function ChecklistDrawer({
                 {list.title}
               </h2>
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10"
-            >
-              <span className="material-symbols-outlined text-sm text-white/70">
-                close
-              </span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowHouseholdersModal(true)}
+                className="px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-mono font-bold uppercase transition-colors"
+                style={{
+                  background: "rgba(195,244,0,0.1)",
+                  border: `1px solid ${LIME}40`,
+                  color: LIME,
+                }}
+                title="Manage Householders for Live Sync"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Householders ({collaborators.length})</span>
+              </button>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10"
+              >
+                <span className="material-symbols-outlined text-sm text-white/70">
+                  close
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Running Totals & Quick Actions */}
@@ -761,11 +867,337 @@ function ChecklistDrawer({
               }}
             >
               <span className="material-symbols-outlined text-lg">receipt_long</span>
-              {finalizing
-                ? "Finalizing…"
-                : `💸 Finalize Haul (${boughtCount} Items · ₹${fmt(totalCalculated)})`}
+              {finalizing ? (
+                "Finalizing…"
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  <Coins className="w-4 h-4" />
+                  Finalize Haul ({boughtCount} Items · ₹{fmt(totalCalculated)})
+                </span>
+              )}
             </button>
           )}
+        </div>
+      </motion.div>
+
+      {/* Householders Modal */}
+      <AnimatePresence>
+        {showHouseholdersModal && (
+          <HouseholdersModal
+            listId={list.id}
+            isOwner={list.is_owner !== false}
+            onClose={() => setShowHouseholdersModal(false)}
+            onCollaboratorsChanged={loadCollaborators}
+          />
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
+   HOUSEHOLDERS MODAL (REALTIME LIST COLLABORATORS & FRIENDS)
+═════════════════════════════════════════════════════════════ */
+
+interface HouseholdersModalProps {
+  listId: number;
+  isOwner?: boolean;
+  onClose: () => void;
+  onCollaboratorsChanged: () => void;
+}
+
+function HouseholdersModal({
+  listId,
+  isOwner = true,
+  onClose,
+  onCollaboratorsChanged,
+}: HouseholdersModalProps) {
+  const [collaborators, setCollaborators] = useState<ShoppingListCollaborator[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tagInput, setTagInput] = useState("");
+  const [searchingTag, setSearchingTag] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [actionId, setActionId] = useState<number | null>(null);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [collabs, friendsList] = await Promise.all([
+        shoppingListsApi.getCollaborators(listId),
+        friendsApi.listFriends(),
+      ]);
+      setCollaborators(collabs);
+      setFriends(friendsList);
+    } catch (err: any) {
+      console.error("Failed to load collaborators/friends:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [listId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleAddFriend = async (friend: Friend) => {
+    setActionId(friend.id);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      await shoppingListsApi.addCollaborator(listId, { user_id: friend.id });
+      setSuccessMsg(`Added ${friend.username} to this list!`);
+      await loadData();
+      onCollaboratorsChanged();
+    } catch (err: any) {
+      setErrorMsg(err?.message || `Failed to add ${friend.username}`);
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleAddByTag = async () => {
+    if (!tagInput.trim()) return;
+    setSearchingTag(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      const user = await friendsApi.searchByTag(tagInput.trim());
+      await shoppingListsApi.addCollaborator(listId, { user_id: user.id });
+      setSuccessMsg(`Added ${user.username} (#${user.tag}) to this list!`);
+      setTagInput("");
+      await loadData();
+      onCollaboratorsChanged();
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Failed to add user with this tag");
+    } finally {
+      setSearchingTag(false);
+    }
+  };
+
+  const handleRemoveCollaborator = async (userId: number, username: string) => {
+    setActionId(userId);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      await shoppingListsApi.removeCollaborator(listId, userId);
+      setSuccessMsg(`Removed ${username} from this list`);
+      await loadData();
+      onCollaboratorsChanged();
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Failed to remove collaborator");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const availableFriends = friends.filter(
+    (f) => !collaborators.some((c) => c.user_id === f.id)
+  );
+
+  return (
+    <>
+      <motion.div
+        className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      />
+      <motion.div
+        className="fixed z-50 inset-0 flex items-center justify-center p-4 pointer-events-none"
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+      >
+        <div
+          className="pointer-events-auto w-full max-w-lg rounded-2xl p-6 flex flex-col gap-5 max-h-[85vh] overflow-y-auto"
+          style={{
+            background: "#181c0e",
+            border: "1px solid rgba(195,244,0,0.3)",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.8)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex justify-between items-start pb-3 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: "rgba(195,244,0,0.12)" }}
+              >
+                <Users className="w-5 h-5" style={{ color: LIME }} />
+              </div>
+              <div>
+                <h3
+                  className="text-lg font-black uppercase text-[#e2e4cf]"
+                  style={{ fontFamily: "'Syne', sans-serif" }}
+                >
+                  List Householders
+                </h3>
+                <p className="text-[11px] text-[#8e9379]">
+                  Live real-time sync with added householders
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 hover:bg-white/10 text-white/70"
+            >
+              <span className="material-symbols-outlined text-sm">close</span>
+            </button>
+          </div>
+
+          {errorMsg && (
+            <div className="p-3 rounded-xl bg-red-950/40 border border-red-500/30 text-xs text-red-300">
+              {errorMsg}
+            </div>
+          )}
+
+          {successMsg && (
+            <div className="p-3 rounded-xl bg-lime-950/40 border border-lime-500/30 text-xs text-lime-300">
+              {successMsg}
+            </div>
+          )}
+
+          {/* Current Householders */}
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-[10px] uppercase tracking-wider font-mono text-[#8e9379]">
+                Active Members ({collaborators.length})
+              </span>
+            </div>
+
+            {loading ? (
+              <p className="text-xs text-[#8e9379] py-3">Loading householders...</p>
+            ) : collaborators.length === 0 ? (
+              <p className="text-xs text-[#8e9379] py-2">
+                No extra householders on this list yet.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {collaborators.map((c) => (
+                  <div
+                    key={c.user_id}
+                    className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold font-mono"
+                        style={{
+                          background: "rgba(195,244,0,0.15)",
+                          color: LIME,
+                        }}
+                      >
+                        {c.username.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-[#e2e4cf]">{c.username}</p>
+                        <span className="text-[10px] font-mono text-[#c3f400]">
+                          #{c.tag || "--------"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase"
+                        style={{
+                          background: "rgba(255,255,255,0.08)",
+                          color: "#c4c9ac",
+                        }}
+                      >
+                        {c.role}
+                      </span>
+                      {isOwner && (
+                        <button
+                          onClick={() => handleRemoveCollaborator(c.user_id, c.username)}
+                          disabled={actionId === c.user_id}
+                          className="p-1.5 rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          title="Remove collaborator"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Add from Connected Friends */}
+          <div className="pt-3 border-t border-white/10">
+            <span className="text-[10px] uppercase tracking-wider font-mono text-[#8e9379] block mb-2.5">
+              Add from Connected Friends
+            </span>
+
+            {availableFriends.length === 0 ? (
+              <p className="text-xs text-[#8e9379] italic">
+                {friends.length === 0
+                  ? "No friends connected yet. Connect with friends in your Profile using their 8-character tag!"
+                  : "All your connected friends are already added to this list."}
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                {availableFriends.map((f) => (
+                  <div
+                    key={f.id}
+                    className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-xs font-bold text-white font-mono">
+                        {f.username.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-[#e2e4cf]">{f.username}</p>
+                        <p className="text-[10px] font-mono text-[#c3f400]">#{f.tag}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleAddFriend(f)}
+                      disabled={actionId === f.id}
+                      className="px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 bg-[#c3f400] text-black hover:bg-[#abd600] disabled:opacity-50"
+                    >
+                      <UserPlus className="w-3 h-3" />
+                      <span>{actionId === f.id ? "Adding..." : "Add"}</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Or Add by 8-Digit Tag */}
+          <div className="pt-3 border-t border-white/10">
+            <span className="text-[10px] uppercase tracking-wider font-mono text-[#8e9379] block mb-2">
+              Or Add Directly by 8-Digit Tag
+            </span>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#8e9379]">#</span>
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleAddByTag(); }}
+                  placeholder="e.g. DEMO2026"
+                  maxLength={8}
+                  className="w-full pl-8 pr-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/30 text-xs font-mono tracking-wider focus:outline-none focus:border-[#c3f400]/50"
+                />
+              </div>
+              <button
+                onClick={handleAddByTag}
+                disabled={searchingTag || !tagInput.trim()}
+                className="px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all disabled:opacity-50"
+                style={{ background: LIME, color: "#000" }}
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>{searchingTag ? "..." : "Add"}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </motion.div>
     </>
@@ -921,25 +1353,27 @@ function CreateListModal({ onClose, onCreated }: CreateListModalProps) {
           <div className="flex gap-2 p-1 bg-white/5 rounded-xl">
             <button
               onClick={() => setMode("TEXT")}
-              className="flex-1 py-1.5 text-xs font-bold uppercase rounded-lg transition-all"
+              className="flex-1 py-1.5 text-xs font-bold uppercase rounded-lg transition-all flex items-center justify-center gap-1.5"
               style={{
                 background: mode === "TEXT" ? LIME : "transparent",
                 color: mode === "TEXT" ? "#111508" : "#8e9379",
                 fontFamily: "'Space Mono', monospace",
               }}
             >
-              ⚡ Quick Text Paste
+              <Zap className="w-3.5 h-3.5" />
+              Quick Text Paste
             </button>
             <button
               onClick={() => setMode("MANUAL")}
-              className="flex-1 py-1.5 text-xs font-bold uppercase rounded-lg transition-all"
+              className="flex-1 py-1.5 text-xs font-bold uppercase rounded-lg transition-all flex items-center justify-center gap-1.5"
               style={{
                 background: mode === "MANUAL" ? LIME : "transparent",
                 color: mode === "MANUAL" ? "#111508" : "#8e9379",
                 fontFamily: "'Space Mono', monospace",
               }}
             >
-              📝 Item Builder
+              <FileText className="w-3.5 h-3.5" />
+              Item Builder
             </button>
           </div>
 
@@ -991,8 +1425,8 @@ function CreateListModal({ onClose, onCreated }: CreateListModalProps) {
                               {item.quantity ? `${item.quantity} ${item.unit || "units"}` : "(qty not specified)"}
                             </span>
                             {item.confidence === "low" && (
-                              <span className="px-1.5 py-0.5 rounded text-[9px] bg-amber-400/20 text-amber-300 font-bold" title="Amount or price may be ambiguous">
-                                ⚠️ check qty
+                              <span className="px-1.5 py-0.5 rounded text-[9px] bg-amber-400/20 text-amber-300 font-bold inline-flex items-center gap-1" title="Amount or price may be ambiguous">
+                                <AlertCircle className="w-2.5 h-2.5" /> check qty
                               </span>
                             )}
                           </div>

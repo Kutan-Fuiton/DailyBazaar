@@ -63,4 +63,21 @@ export const shoppingListsApi = {
       method: "POST",
       body: { text },
     }),
+
+  getCollaborators: (listId: number) =>
+    client<import("../types").ShoppingListCollaborator[]>(`/shopping-lists/${listId}/collaborators`),
+
+  addCollaborator: (listId: number, data: { tag?: string; friend_id?: number; user_id?: number }) =>
+    client<{ message: string; collaborator?: import("../types").ShoppingListCollaborator }>(
+      `/shopping-lists/${listId}/collaborators`,
+      {
+        method: "POST",
+        body: data,
+      }
+    ),
+
+  removeCollaborator: (listId: number, collaboratorUserId: number) =>
+    client<{ message: string }>(`/shopping-lists/${listId}/collaborators/${collaboratorUserId}`, {
+      method: "DELETE",
+    }),
 };

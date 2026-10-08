@@ -14,6 +14,7 @@ import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AlertModalProvider } from "../shared/components/AlertModal";
 import { AuthProvider } from "../shared/context/AuthContext";
 import { useAuth } from "../shared/context/AuthContext";
 import { ErrorBoundary } from "../shared/components/ErrorBoundary";
@@ -21,6 +22,7 @@ import { PWAInstallBanner } from "../shared/components/PWAInstallBanner";
 import { OfflineIndicator } from "../shared/components/OfflineIndicator";
 import Navbar from "../shared/components/Navbar";
 import SplashScreen from "../shared/components/SplashScreen";
+import LandingPage from "../features/landing/LandingPage";
 import AuthModal from "../shared/components/AuthModal";
 import AppRoutes from "./routes";
 
@@ -28,11 +30,13 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
+        <AlertModalProvider>
         <TooltipProvider>
           <OfflineIndicator />
           <AppShell />
           <PWAInstallBanner />
         </TooltipProvider>
+        </AlertModalProvider>
       </AuthProvider>
     </ErrorBoundary>
   );
@@ -49,6 +53,8 @@ function AppShell() {
     }
   });
   const { isAuthenticated, isLoading } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authInitialTab, setAuthInitialTab] = useState<"login" | "register">("login");
 
   // While checking stored token validity, show nothing (avoid flash)
   if (isLoading) {
@@ -72,9 +78,24 @@ function AppShell() {
       {/* ── Main App Shell ── */}
       {splashDone && (
         <>
-          {/* If not logged in → show auth modal */}
+          {/* If not logged in → show LandingPage + optional AuthModal */}
           {!isAuthenticated ? (
-            <AuthModal />
+            <>
+              <LandingPage
+                onOpenAuth={(tab = "login") => {
+                  setAuthInitialTab(tab);
+                  setShowAuthModal(true);
+                }}
+              />
+              <AnimatePresence>
+                {showAuthModal && (
+                  <AuthModal
+                    onClose={() => setShowAuthModal(false)}
+                    initialTab={authInitialTab}
+                  />
+                )}
+              </AnimatePresence>
+            </>
           ) : (
             <>
               {/* Vaniq radial gradient background shader */}

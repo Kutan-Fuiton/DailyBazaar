@@ -70,7 +70,8 @@ export default function StatsCards({ summary, topItems, loading }: StatsCardsPro
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="glass-card p-5 rounded-2xl relative overflow-hidden flex flex-col justify-between"
+          whileHover={{ y: -4, borderColor: "rgba(195, 244, 0, 0.35)", boxShadow: "0 16px 36px rgba(0,0,0,0.5)" }}
+          className="glass-card p-5 rounded-2xl relative overflow-hidden flex flex-col justify-between cursor-pointer"
           style={{
             background: SURFACE_CARD,
             border: `1px solid ${BORDER_COLOR}`,
@@ -181,7 +182,8 @@ export default function StatsCards({ summary, topItems, loading }: StatsCardsPro
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.08 }}
-          className="glass-card p-5 rounded-2xl flex flex-col justify-between"
+          whileHover={{ y: -4, borderColor: "rgba(195, 244, 0, 0.35)", boxShadow: "0 16px 36px rgba(0,0,0,0.5)" }}
+          className="glass-card p-5 rounded-2xl flex flex-col justify-between cursor-pointer"
           style={{
             background: SURFACE_CARD,
             border: `1px solid ${BORDER_COLOR}`,
