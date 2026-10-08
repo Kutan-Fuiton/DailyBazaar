@@ -7,7 +7,8 @@
  *   - Typed ApiError for consumers
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000/api/v1";
+const rawBase = (import.meta.env.VITE_API_URL ?? "http://localhost:8000/api/v1").trim().replace(/\/+$/, "");
+const BASE_URL = rawBase.endsWith("/api/v1") ? rawBase : `${rawBase}/api/v1`;
 
 // ── Auth token helpers ────────────────────────────────────────────────────────
 const TOKEN_KEY = "spendly_token";

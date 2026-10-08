@@ -40,8 +40,9 @@ export function useHouseholdSocket({
     if (!enabled || !targetId || !token) return;
 
     // Build WS URL relative to current host or API host
-    const apiBase = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-    const wsBase = apiBase.replace(/^http/, "ws");
+    const rawApiBase = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000").trim().replace(/\/+$/, "");
+    const originBase = rawApiBase.replace(/\/api\/v1$/, "");
+    const wsBase = originBase.replace(/^http/, "ws");
     const endpoint = listId ? `list/${listId}` : `household/${householdId}`;
     const url = `${wsBase}/api/v1/ws/${endpoint}?token=${encodeURIComponent(token)}`;
 
