@@ -26,7 +26,7 @@ pillow==11.0.0
 
 # Utils
 python-dateutil==2.9.0.post0
-rapidfuzz==3.10.1
+rapidfuzz>=3.10.1
 llama-cloud==2.13.0
 cachetools>=5.5.0
 slowapi>=0.1.10
